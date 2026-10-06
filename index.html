@@ -45,6 +45,7 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 a{color:var(--hong)}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--hong);outline-offset:2px}
+dialog:focus,dialog:focus-visible{outline:none}  /* touch screens focus the dialog itself on open */
 
 header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"xi text share";gap:20px;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--line)}
 .xi{grid-area:xi;align-self:start;margin-top:6px}.head-text{grid-area:text;min-width:0}
@@ -294,6 +295,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
   .cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
   /* phones move songs with the stage select, so the drag handle is only noise */
   .grip{display:none}
+  /* iOS zooms into any field under 16px when it is tapped */
+  .search,.custom-fields input,.place{font-size:16px}
   /* phones: one view at a time, switched from a bottom tab bar */
   body[data-tab="pick"] .board{display:none}
   /* phones: a full-width add button above the playlist card, only on the playlist tab */
@@ -903,6 +906,10 @@ function whoGroup(k,title){const g=el("span","who"),n=pickerOf(k);
 setSync("local");
 /* share: the board id is already in the URL, so sharing is sending this address */
 let openNickname=()=>{};
+/* touch screens: open a dialog with focus on the dialog itself, not its first control (no focus ring, no keyboard popping up) */
+const touch=matchMedia("(pointer:coarse)").matches;
+function openDialog(d){if(d.open)return;d.showModal();if(touch){d.tabIndex=-1;d.focus({preventScroll:true})}}
+const focusField=e=>{if(!touch)e.focus()};
 /* picks and likes are stored under the nickname, so renaming carries this board's entries over to the new name */
 function renameIn(b,from,to){let changed=false;
   Object.values(b._by).forEach(v=>{if(v.n===from){v.n=to;changed=true}});
@@ -913,7 +920,7 @@ function renameIn(b,from,to){let changed=false;
 function setupNickname(){
   if(!boardId)return;
   const dlg=document.getElementById("nickDlg"),form=document.getElementById("nickForm"),inp=document.getElementById("nickInput");
-  openNickname=()=>{inp.value=nickname;dlg.showModal();inp.focus()};
+  openNickname=()=>{inp.value=nickname;openDialog(dlg);focusField(inp)};
   dlg.addEventListener("cancel",e=>{if(!nickname)e.preventDefault()});
   form.addEventListener("submit",e=>{e.preventDefault();const v=inp.value.trim().slice(0,20);if(!v)return;
     const old=nickname;nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}
@@ -958,7 +965,7 @@ function setupShare(){
   const dlg=document.getElementById("shareDlg"),inp=document.getElementById("shareUrl"),copy=document.getElementById("copyUrl"),native=document.getElementById("nativeShare");
   document.getElementById("shareId").textContent=boardId;
   native.hidden=!navigator.share;
-  document.getElementById("shareBtn").onclick=()=>{inp.value=location.href;copy.textContent="複製";dlg.showModal();inp.scrollLeft=0};
+  document.getElementById("shareBtn").onclick=()=>{inp.value=location.href;copy.textContent="複製";openDialog(dlg);inp.scrollLeft=0};
   copy.onclick=async()=>{try{await navigator.clipboard.writeText(inp.value);copy.textContent="已複製"}catch(_){inp.focus();inp.select();copy.textContent="請按 ⌘C 複製"}};
   native.onclick=async()=>{try{await navigator.share({title:"婚禮選歌板",text:"一起來排婚禮歌單",url:inp.value})}catch(_){}};
 }
@@ -1074,7 +1081,7 @@ function openAi(s,k){
   document.querySelectorAll("#aiDlg .move-x,#aiDlg .re-ai").forEach(e=>e.remove());
   addRecheck(s,k,r);
   if(!x){const h=el("h2",null,s.t);h.id="aiTitle";body.append(h,el("p","why",!r||r.status==="running"||r.status==="pending"?"AI 正在檢測這首歌，大約需要半分鐘，好了會自動更新。":r.status==="limited"?"這份歌單今天的 AI 查詢次數已達上限，明天再試。":r.status==="failed"?"AI 查詢失敗。":"AI 查不到這首歌，可能是歌名或歌手有誤。"));
-    links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));{const d=document.getElementById("aiDlg");if(!d.open)d.showModal()}return}
+    links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));openDialog(document.getElementById("aiDlg"));return}
   const low=lowConf(x);
   const c=card({t:x.title||s.t,z:x.title_zh||"",a:x.artist||s.a||"",y:parseInt(x.release_year,10)||null,l:langOf(x.language)||"其他",
     s:aiScenes(x),p:TEMPO[x.tempo]||"中",m:x.description||"",w:x.reason||"",
@@ -1113,7 +1120,7 @@ function openAi(s,k){
   if(k&&x.is_landmine&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
     xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};
     document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
-  const dlg=document.getElementById("aiDlg");if(!dlg.open)dlg.showModal();
+  openDialog(document.getElementById("aiDlg"));
 }
 /* songs from the list open their own card in the same dialog the AI results use */
 function openSong(s,k){
@@ -1134,7 +1141,7 @@ function openSong(s,k){
   if(s.trap&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
     xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
   addRecheck(s,k,LOOK[lookupQuery(s)]);
-  const dlg=document.getElementById("aiDlg");if(!dlg.open)dlg.showModal();
+  openDialog(document.getElementById("aiDlg"));
 }
 
 /* ---------- custom song dialog ---------- */
@@ -1149,7 +1156,7 @@ function setupCustomDialog(){
     [kk,yt].forEach(x=>{x.classList.toggle("off",!ok);x.setAttribute("aria-disabled",String(!ok))});add.disabled=!ok};
   [kk,yt].forEach(x=>x.addEventListener("click",e=>{if(!val().t)e.preventDefault()}));
   [ti,ai].forEach(i=>i.addEventListener("input",sync));
-  openCustom=(title)=>{ti.value=title||"";ai.value="";sel.value="候選";sync();dlg.showModal();(title?ai:ti).focus()};
+  openCustom=(title)=>{ti.value=title||"";ai.value="";sel.value="候選";sync();openDialog(dlg);focusField(title?ai:ti)};
   document.getElementById("customCancel").onclick=()=>dlg.close();
   form.addEventListener("submit",e=>{e.preventDefault();const v=val();if(!v.t)return;move(customKey(v.t,v.a),sel.value||"候選");dlg.close()});
   document.getElementById("addCustom").onclick=()=>openCustom("");
@@ -1247,7 +1254,7 @@ function openRowMenu(btn,k,s){
   const r=btn.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
   let top=r.bottom+4;if(top+h>innerHeight-8)top=r.top-h-4;
   m.style.left=Math.max(8,Math.min(r.right-w,innerWidth-w-8))+"px";m.style.top=Math.max(8,top)+"px";
-  kk.focus();
+  focusField(kk);
 }
 function setupRowMenu(){
   const m=document.getElementById("rowMenu");if(!m||!m.showPopover)return;
