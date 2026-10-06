@@ -109,7 +109,7 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 
 
 /* filters */
-.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding-block:12px;margin-top:12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding-block:12px;margin-top:-12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
 .group{display:flex;gap:6px;align-items:center;min-width:0}
 .group-l{flex:none}
 /* one line per group; overflowing chips scroll sideways, with a fade on the hidden side */
@@ -193,7 +193,8 @@ footer li{overflow-wrap:anywhere;break-inside:avoid}
 .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
 .board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
 .board-h{padding:14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
-.board-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.board-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.add-custom-board{display:none}
 .board-h h2{font-size:18px}
 .board-h h2 span{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
 .sync{font-size:12px;color:var(--muted)}
@@ -264,11 +265,28 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .place:hover{border-color:var(--ink)}
 .in{font-size:12px;color:var(--gold);font-weight:700}
 .in-by{font-size:12px;font-weight:700}
+.tabbar,.toast{display:none}
 @media (max-width:1000px){
   .layout{grid-template-columns:1fr}
-  .board{position:static;max-height:none;order:-1}
+  .board{position:static;max-height:none}
   .board-h{position:static}
   .cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  /* phones: one view at a time, switched from a bottom tab bar */
+  body[data-tab="pick"] .board{display:none}
+  /* phones: a full-width add button above the playlist card, only on the playlist tab */
+  body[data-tab="board"] .add-custom-board{display:flex;justify-content:center;width:100%;padding:10px 16px;font-size:14px;font-weight:700;margin-bottom:-8px}
+  body[data-tab="board"] .main,body[data-tab="board"] .traps,body[data-tab="board"] footer{display:none}
+  .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .tabbar{display:flex;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);
+    padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px))}
+  .tabbar button{flex:1;appearance:none;border:0;background:transparent;font:inherit;font-size:14px;font-weight:700;color:var(--muted);
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 0;border-radius:10px;cursor:pointer;font-variant-numeric:tabular-nums}
+  .tabbar button[aria-pressed="true"]{color:var(--ink);background:var(--paper)}
+  .tab-ico{font-size:15px}
+  .toast{display:block;position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:31;
+    background:var(--ink);color:var(--paper);font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;opacity:0;pointer-events:none;
+    transition:opacity .18s,transform .18s;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
 }
 @media (max-width:560px){
   .wrap{padding-inline:16px;padding-block:24px 48px}
@@ -370,6 +388,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
       </div>
       <div class="grid" id="grid"></div>
     </div>
+    <button class="chip add-custom add-custom-board" id="addCustomBoard" type="button">＋ 自訂歌曲</button>
     <aside class="board" aria-label="我的婚禮歌單">
       <div class="board-h">
         <h2>我的婚禮歌單 <span id="boardCount"></span></h2>
@@ -384,6 +403,12 @@ body.is-dragging .col.over{border-color:var(--hong)}
     <p class="lede">這些歌常出現在婚禮歌單或被推薦，但歌詞其實不適合。每首都標出踩到的地雷類型。</p>
     <div class="trap-list" id="trapList"></div>
   </section>
+
+  <nav class="tabbar" id="tabbar" aria-label="切換畫面">
+    <button type="button" data-tab="pick" aria-pressed="true"><span class="tab-ico" aria-hidden="true">♪</span>選歌</button>
+    <button type="button" data-tab="board" aria-pressed="false"><span class="tab-ico" aria-hidden="true">☰</span>歌單</button>
+  </nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <footer>
     <h2>說明與資料來源</h2>
@@ -792,8 +817,18 @@ function setSync(m){const s=document.getElementById("sync");if(!s)return;
   s.title=boardId?"歌單代號 "+boardId.slice(0,4):"";
   s.textContent={local:"歌單只存在這台裝置的瀏覽器",shared:"已儲存，有權限的人打開都看得到",link:"歌單已同步",saving:"儲存中…",readonly:"你只有檢視權限，變更不會儲存",error:"儲存失敗，稍後再試一次"}[m];
   s.dataset.m=m}
+/* phones: bottom tab bar switches between picking songs and the playlist; each tab keeps its own scroll position */
+const isPhone=()=>matchMedia("(max-width:1000px)").matches;
+let tab="pick";const tabScroll={pick:0,board:0};
+function setTab(t){if(t===tab)return;tabScroll[tab]=scrollY;tab=t;document.body.dataset.tab=t;
+  document.querySelectorAll("#tabbar button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===t)));
+  scrollTo(0,tabScroll[t]||0)}
+let toastTimer=null;
+function toast(msg){const t=document.getElementById("toast");if(!t||!isPhone())return;t.textContent=msg;t.classList.add("show");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),1800)}
 function move(k,col,before){
   const was=where(k);
+  if(tab==="pick"&&col!==was)toast(!col?"已移出歌單":col==="X"?"已排除":"已加入「"+colLabel(COLBY[col]).replace(/（[^）]*）/,"")+"」");
   COLS.forEach(c=>{board[c.k]=board[c.k].filter(x=>x!==k)});
   if(col){const arr=board[col];const i=before?arr.indexOf(before):-1;i>=0?arr.splice(i,0,k):arr.push(k)}
   if(col&&!was&&nickname)board._by[k]={n:nickname,t:Date.now()};
@@ -1011,6 +1046,7 @@ function setupCustomDialog(){
   document.getElementById("customCancel").onclick=()=>dlg.close();
   form.addEventListener("submit",e=>{e.preventDefault();const v=val();if(!v.t)return;move(customKey(v.t,v.a),sel.value||"候選");dlg.close()});
   document.getElementById("addCustom").onclick=()=>openCustom("");
+  document.getElementById("addCustomBoard").onclick=()=>openCustom("");
 }
 
 /* ---------- drag & drop ---------- */
@@ -1106,7 +1142,7 @@ function renderBoard(){
     const cn=el("span","col-n",c.min?n+" / "+c.min+"–"+c.max+" 首":n+" 首");
     if(c.min)cn.dataset.ok=n<c.min?"low":n>c.max?"high":"ok";hd.append(cn);
     if(c.k!=="候選"&&!isX){const tb=el("button","col-tag","看推薦");tb.type="button";
-      tb.onclick=()=>{state.scene=c.k;render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb)}
+      tb.onclick=()=>{state.scene=c.k;setTab("pick");render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb)}
     if(c.d&&(!isX||xOpen))hd.append(el("span","col-d",c.d));z.append(hd);
     const ul=el("div","col-list");
     board[c.k].forEach(k=>{if(!isX)total++;const s0=songOf(k);
@@ -1172,6 +1208,8 @@ document.querySelectorAll("dialog").forEach(d=>{
     d.close();
   });
 });
+document.body.dataset.tab="pick";
+document.querySelectorAll("#tabbar button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 setupCustomDialog();
 setupShare();
 setupNickname();
