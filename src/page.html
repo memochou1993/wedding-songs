@@ -1,4 +1,4 @@
-<title>婚禮歌單選曲指南</title>
+<title>婚禮選歌板</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
@@ -34,7 +34,12 @@ a{color:var(--hong)}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--hong);outline-offset:2px}
 
-header.top{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--line)}
+header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"xi text share";gap:20px;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--line)}
+.xi{grid-area:xi}.head-text{grid-area:text;min-width:0}
+.head-share{grid-area:share;align-self:start;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.share-btn{appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--on-hong);background:var(--hong);border:1px solid var(--hong);border-radius:999px;padding:8px 18px;cursor:pointer;white-space:nowrap}
+.share-btn:hover{opacity:.9}
+.share-url{font:inherit;font-size:12px;width:min(260px,70vw);color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
 .xi{font-family:var(--display);font-weight:900;font-size:64px;line-height:1;color:var(--hong);border:2px solid var(--hong);width:92px;height:92px;display:grid;place-items:center;border-radius:4px}
 header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02em}
 .lede{color:var(--muted);margin:8px 0 0;max-width:62ch}
@@ -175,7 +180,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
 @media (max-width:900px){.timeline{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:560px){
   .wrap{padding-inline:16px;padding-block:24px 48px}
-  header.top{grid-template-columns:1fr}
+  header.top{grid-template-columns:auto 1fr;grid-template-areas:"xi share" "text text";gap:14px}
+  .head-share{align-self:center}
   .xi{width:64px;height:64px;font-size:44px}
   .timeline{grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid,.trap-list{grid-template-columns:1fr}
@@ -187,10 +193,14 @@ body.is-dragging .col.over{border-color:var(--hong)}
 <div class="wrap">
   <header class="top">
     <div class="xi" aria-hidden="true">囍</div>
-    <div>
-      <h1>婚禮歌單選曲指南</h1>
-      <p class="lede">依照婚宴流程整理的英文、台語、日文、韓文婚禮歌，每首都核對過歌詞。下方另外列出常被誤用的「地雷歌」。</p>
+    <div class="head-text">
+      <h1>婚禮選歌板</h1>
+      <p class="lede">挑歌、排進婚宴流程，和另一半、婚顧一起編同一份歌單。歌曲涵蓋英文、台語、日文、韓文，每首都核對過歌詞，也標出常被誤用的地雷歌。</p>
       <div class="stats" id="stats"></div>
+    </div>
+    <div class="head-share" id="headShare" hidden>
+      <button class="share-btn" id="shareBtn" type="button">分享歌單</button>
+      <input class="share-url" id="shareUrl" type="text" readonly hidden aria-label="歌單網址">
     </div>
   </header>
 
@@ -500,7 +510,8 @@ async function flush(){
 }
 function applyRemote(cols){if(dirty||writing)return;board=clean(cols);saveLocal();render()}
 function setSync(m){const s=document.getElementById("sync");if(!s)return;
-  s.textContent={local:"歌單只存在這台裝置的瀏覽器",shared:"已儲存，有權限的人打開都看得到",link:"已同步，知道這個網址的人都能一起編輯",saving:"儲存中…",readonly:"你只有檢視權限，變更不會儲存",error:"儲存失敗，稍後再試一次"}[m];
+  const code=boardId?"歌單 #"+boardId.slice(0,4)+" · ":"";
+  s.textContent=code+{local:"歌單只存在這台裝置的瀏覽器",shared:"已儲存，有權限的人打開都看得到",link:"已同步，知道這個網址的人都能一起編輯",saving:"儲存中…",readonly:"你只有檢視權限，變更不會儲存",error:"儲存失敗，稍後再試一次"}[m];
   s.dataset.m=m}
 function move(k,col,before){
   COLS.forEach(c=>{board[c.k]=board[c.k].filter(x=>x!==k)});
@@ -508,6 +519,19 @@ function move(k,col,before){
   persist();render();
 }
 setSync("local");
+/* share: the board id is already in the URL, so sharing is sending this address */
+function setupShare(){
+  if(!boardId)return;
+  const box=document.getElementById("headShare"),btn=document.getElementById("shareBtn"),inp=document.getElementById("shareUrl");
+  box.hidden=false;
+  const label=t=>{btn.textContent=t;setTimeout(()=>btn.textContent="分享歌單",2000)};
+  btn.onclick=async()=>{
+    const url=location.href;
+    if(navigator.share&&matchMedia("(pointer:coarse)").matches){try{await navigator.share({title:"婚禮選歌板",text:"一起來排婚禮歌單",url});return}catch(e){if(e&&e.name==="AbortError")return}}
+    try{await navigator.clipboard.writeText(url);label("已複製網址")}
+    catch(_){inp.hidden=false;inp.value=url;inp.select();label("請複製下方網址")}
+  };
+}
 function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 (async()=>{
   /* claude.ai: the artifact's own db */
@@ -542,7 +566,11 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
     if(!dirty&&!writing)setSync("link");
   }
   chan.on("broadcast",{event:"updated"},()=>pull(false)).subscribe();
+  /* phones drop the realtime socket in the background, so also re-check on return and every 15s */
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull(false)});
+  window.addEventListener("pageshow",e=>{if(e.persisted)pull(false)});
+  window.addEventListener("focus",()=>pull(false));
+  setInterval(()=>{if(document.visibilityState==="visible")pull(false)},15000);
   setSync("saving");
   await pull(true);
 })();
@@ -704,5 +732,6 @@ function render(){
 const src=document.getElementById("sources");
 SOURCES.forEach(([n,u])=>{const li=el("li");const a=el("a",null,n);a.href=u;a.target="_blank";a.rel="noopener";li.append(a);src.append(li)});
 setupCustomCard();
+setupShare();
 render();
 </script>
