@@ -292,7 +292,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
   .tabbar button{flex:1;appearance:none;border:0;background:transparent;font:inherit;font-size:14px;font-weight:700;color:var(--muted);
     display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 0;border-radius:10px;cursor:pointer;font-variant-numeric:tabular-nums}
   .tabbar button[aria-pressed="true"]{color:var(--ink);background:var(--paper)}
-  .tab-ico{font-size:15px}
+  .tab-ico{width:18px;height:18px;flex:none;fill:currentColor;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .tab-ico circle{stroke:none}
   .toast{display:block;position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:31;
     background:var(--ink);color:var(--paper);font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;opacity:0;pointer-events:none;
     transition:opacity .18s,transform .18s;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
@@ -415,8 +416,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
   </section>
 
   <nav class="tabbar" id="tabbar" aria-label="切換畫面">
-    <button type="button" data-tab="pick" aria-pressed="true"><span class="tab-ico" aria-hidden="true">♪</span>選歌</button>
-    <button type="button" data-tab="board" aria-pressed="false"><span class="tab-ico" aria-hidden="true">☰</span>歌單</button>
+    <button type="button" data-tab="pick" aria-pressed="true"><svg class="tab-ico" viewBox="0 0 18 18" aria-hidden="true"><path d="M6.5 13.5V4l8.5-1.8v9.5" fill="none"/><circle cx="4.5" cy="13.5" r="2.2"/><circle cx="13" cy="11.7" r="2.2"/></svg>選歌</button>
+    <button type="button" data-tab="board" aria-pressed="false"><svg class="tab-ico" viewBox="0 0 18 18" aria-hidden="true"><path d="M7 4.5h8.5M7 9h8.5M7 13.5h8.5" fill="none"/><circle cx="3.2" cy="4.5" r="1.3"/><circle cx="3.2" cy="9" r="1.3"/><circle cx="3.2" cy="13.5" r="1.3"/></svg>歌單</button>
   </nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="row-menu" id="rowMenu" popover role="menu"></div>
