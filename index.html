@@ -288,6 +288,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
   .board{position:static;max-height:none}
   .board-h{position:static}
   .cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  /* phones move songs with the stage select, so the drag handle is only noise */
+  .grip{display:none}
   /* phones: one view at a time, switched from a bottom tab bar */
   body[data-tab="pick"] .board{display:none}
   /* phones: a full-width add button above the playlist card, only on the playlist tab */
