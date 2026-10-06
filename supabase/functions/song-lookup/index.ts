@@ -1,13 +1,15 @@
 // song-lookup: runs the wedding-song-screener workflow for custom songs, in the background.
 //
 // POST { queries: string[], songs?: { [query]: { title, artist } }, refresh?: string[] } with header x-board-id
-//   → { results: { [query]: { status, output?, error?, refused? } } }
+//   → { results: { [query]: { status, output?, error?, refused?, kk? } } }
 //
 // status: running | done | failed | pending (board not saved yet, retry later) | limited (daily cap hit)
 // refresh: queries (also listed in queries) to look up again, ignoring the cached result. A re-check counts
 // toward the daily caps; over them, the old result comes back with refused: "limited".
 // songs: the title and artist behind each query, which the workflow takes separately. A query without
 // one (older pages) is sent as the title alone, and the workflow works out the artist.
+// kk: the song's KKBOX track id, found once with the title and artist the workflow settled on. Its song page
+// opens the KKBOX app on phones (a search page doesn't). Results looked up before this get it on their next poll.
 // The browser calls this every few seconds while any of its custom songs is still running.
 // A workflow execution keeps going on the platform even if nobody is polling; the next poll
 // from any viewer of the board picks up the finished result. Results are cached per query in
@@ -36,11 +38,92 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
   auth: { persistSession: false },
 });
 
-type Result = { status: string; output?: unknown; error?: string; refused?: string };
+type Result = { status: string; output?: unknown; error?: string; refused?: string; kk?: string };
 type Song = { title: string; artist: string };
 
 const norm = (q: string) => q.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 
+// ---------- KKBOX track id ----------
+const KK_CLIENT_ID = Deno.env.get("KKBOX_CLIENT_ID") ?? "";
+const KK_CLIENT_SECRET = Deno.env.get("KKBOX_CLIENT_SECRET") ?? "";
+let kkAuth: { token: string; until: number } | null = null;
+let kkQueue: Promise<unknown> = Promise.resolve();  // one KKBOX lookup at a time, so a page full of songs doesn't burst the API
+
+type Track = { name: string; url: string; album?: { artist?: { id: string; name: string } } };
+// live, remixes, karaoke and the like: only used when nothing else matches
+const ALT_VERSION = /\blive\b|remix|\bedit\b|acoustic|demo|re-?recorded|first take|karaoke|instrumental|music box|オルゴール|cover/i;
+const bare = (x: string) => x.normalize("NFKC").toLowerCase().replace(/\b(feat|ft)\.?.*$/, "").replace(/[^\p{L}\p{N}]+/gu, "");
+// "아이유（IU）" → ["아이유", "iu"]; "Aimyon[愛繆]" → ["aimyon", "愛繆"]; "Song - Live" → ["song"]
+const names = (x = "") => {
+  const s = x.normalize("NFKC"), out = [bare(s.replace(/[（(\[【][^）)\]】]*[）)\]】]/g, " ").replace(/\s+-\s+.*$/, ""))];
+  for (const m of s.matchAll(/[（(\[【]([^）)\]】]*)[）)\]】]/g)) out.push(bare(m[1]));
+  return out.filter((n) => n.length > 0);
+};
+const artistNames = (a = "") => a.split(/[／/&、,×]| x /).flatMap(names);
+
+async function kkGet(type: "track" | "artist", q: string, limit: number) {
+  if (!kkAuth || kkAuth.until < Date.now()) {
+    const res = await fetch("https://account.kkbox.com/oauth2/token", {
+      method: "POST",
+      body: new URLSearchParams({ grant_type: "client_credentials", client_id: KK_CLIENT_ID, client_secret: KK_CLIENT_SECRET }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`kkbox token ${res.status}`);
+    const t = await res.json();
+    kkAuth = { token: t.access_token, until: Date.now() + (t.expires_in - 60) * 1000 };
+  }
+  const u = new URL("https://api.kkbox.com/v1.1/search");
+  u.search = new URLSearchParams({ q, type, territory: "TW", limit: String(limit) }).toString();
+  const res = await fetch(u, { headers: { Authorization: `Bearer ${kkAuth.token}` }, signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`kkbox search ${res.status}`);
+  return await res.json();
+}
+
+// the title and artist must both match; when the artist is spelled another way (あいみょん vs Aimyon[愛繆]),
+// KKBOX's own artist search tells us which artist it is. Tries each way of naming the song in turn
+// (the workflow's, then what was typed). Returns "" when nothing matches.
+async function findKkbox(tries: Song[]): Promise<string> {
+  const seen = new Set<string>();
+  for (const { title, artist } of tries) {
+    const k = norm(`${title}|${artist}`);
+    if (!title || seen.has(k)) continue;
+    seen.add(k);
+    const id = await findKkboxAs(title, artist, tries.flatMap((t) => artistNames(t.artist)));
+    if (id) return id;
+  }
+  return "";
+}
+
+async function findKkboxAs(title: string, artist: string, anyArtist: string[]): Promise<string> {
+  const T = names(title), A = [...artistNames(artist), ...anyArtist];
+  const titleOk = (t: Track) => names(t.name).some((y) => T.some((x) => y === x || (x.length >= 3 && y.startsWith(x))));
+  const pick = (ts: Track[]) => ts.find((t) => !ALT_VERSION.test(t.name)) ?? ts[0];
+  const main = artist.replace(/[（(][^）)]*[）)]/g, "").split(/[／/&、,×]/)[0].trim();
+  const tracks: Track[] = (await kkGet("track", `${title} ${main}`.trim(), 15)).tracks?.data ?? [];
+  let hit = pick(tracks.filter((t) => titleOk(t) && artistNames(t.album?.artist?.name).some((y) => A.some((x) => y.includes(x) || x.includes(y)))));
+  if (!hit && main) {
+    const ar = (await kkGet("artist", main, 1)).artists?.data?.[0];
+    if (ar) hit = pick(tracks.filter((t) => titleOk(t) && t.album?.artist?.id === ar.id));
+  }
+  return hit ? hit.url.split("/song/")[1] ?? "" : "";
+}
+
+// the workflow's own title and artist are the corrected ones; a result it couldn't place falls back to what was asked
+async function kkboxFor(key: string, output: unknown, asked: Song): Promise<string | undefined> {
+  if (!KK_CLIENT_ID) return undefined;
+  const o = (output ?? {}) as { song?: Song | null; songs?: Song[] };
+  const s = o.song ?? o.songs?.[0] ?? asked;
+  const run = kkQueue.then(() => findKkbox([{ title: s.title || asked.title, artist: s.artist || asked.artist }, asked]));
+  kkQueue = run.catch(() => {});
+  try {
+    const id = await run;
+    await db.from("lookups").update({ kkbox_id: id }).eq("query_norm", key);
+    return id || undefined;
+  } catch (e) {
+    console.error("kkbox", key, e);  // left unset, so a later poll tries again
+    return undefined;
+  }
+}
 function corsHeaders(origin: string | null): Record<string, string> {
   const h: Record<string, string> = {
     "Access-Control-Allow-Headers": "content-type, x-board-id, apikey, authorization, x-client-info",
@@ -96,13 +179,13 @@ async function start(query: string, key: string, boardId: string, song: Song): P
   return { status: "running" };
 }
 
-async function poll(key: string, arn: string): Promise<Result> {
+async function poll(key: string, arn: string, song: Song): Promise<Result> {
   const got = await lfe("runtime/get-execution", { execution_arn: arn, is_raw_included: false });
   const ex = got.execution ?? {};
   if (ex.status === "RUNNING") return { status: "running" };
   if (ex.status === "SUCCEEDED") {
     await db.from("lookups").update({ status: "done", output: ex.output, updated_at: new Date().toISOString() }).eq("query_norm", key);
-    return { status: "done", output: ex.output };
+    return { status: "done", output: ex.output, kk: await kkboxFor(key, ex.output, song) };
   }
   const msg = [ex.status, ex.error, ex.cause].filter(Boolean).join(": ").slice(0, 500) || "unknown";
   await db.from("lookups").update({ status: "failed", error: msg, updated_at: new Date().toISOString() }).eq("query_norm", key);
@@ -116,7 +199,7 @@ async function restart(query: string, key: string, boardId: string, song: Song, 
     const started = await lfe("runtime/start-execution", { workflow_id: WORKFLOW_ID, input: song });
     const now = new Date().toISOString();
     const { error } = await db.from("lookups").update({
-      query, status: "running", execution_arn: started.execution_arn, output: null, error: null,
+      query, status: "running", execution_arn: started.execution_arn, output: null, error: null, kkbox_id: null,
       board_id: boardId, created_at: now, updated_at: now,
     }).eq("query_norm", key);
     if (error) throw new Error(`update ${error.message}`);
@@ -130,14 +213,17 @@ async function restart(query: string, key: string, boardId: string, song: Song, 
 
 async function handle(query: string, boardId: string, refresh: boolean, song: Song): Promise<Result> {
   const key = norm(query);
-  const { data: row } = await db.from("lookups").select("status, execution_arn, output").eq("query_norm", key).maybeSingle();
+  const { data: row } = await db.from("lookups").select("status, execution_arn, output, kkbox_id").eq("query_norm", key).maybeSingle();
   if (!row) return await start(query, key, boardId, song);
   if (refresh && row.status !== "running") {
     return await restart(query, key, boardId, song, row.status === "done" ? { status: "done", output: row.output } : { status: "failed", error: "查詢失敗" });
   }
-  if (row.status === "done") return { status: "done", output: row.output };
+  if (row.status === "done") {
+    const kk = row.kkbox_id === null ? await kkboxFor(key, row.output, song) : row.kkbox_id || undefined;
+    return { status: "done", output: row.output, kk };
+  }
   if (row.status === "failed") return { status: "failed", error: "查詢失敗" };
-  return row.execution_arn ? await poll(key, row.execution_arn) : { status: "running" };
+  return row.execution_arn ? await poll(key, row.execution_arn, song) : { status: "running" };
 }
 
 Deno.serve(async (req) => {

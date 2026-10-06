@@ -10,6 +10,7 @@ create table if not exists song.lookups (
   output jsonb,
   error text,
   board_id text,
+  kkbox_id text,  -- KKBOX track id for the song page (opens the app on phones); null = not looked up yet, '' = none found
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -22,3 +23,6 @@ alter table song.lookups enable row level security;
 grant usage on schema song to service_role;
 grant select, insert, update, delete on song.lookups to service_role;
 grant select on song.boards to service_role;
+
+-- added later; safe to rerun
+alter table song.lookups add column if not exists kkbox_id text;
