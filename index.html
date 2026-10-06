@@ -238,7 +238,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .col-list{display:flex;flex-direction:column;gap:4px}
 .col.is-empty .col-list{display:none}
 .col.is-empty .col-h{margin-bottom:0}
-.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
+.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
 .pick-tx{display:flex;flex-direction:column;min-width:0;line-height:1.3}
 .pick-t{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick-a{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -253,10 +253,13 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .like .like-badge{position:absolute;right:-1px;bottom:1px;width:15px;height:15px;font-size:9px;margin:0;border:1.5px solid var(--card)}
 .like .like-badge.more{background:var(--hong);color:var(--on-hong);font-variant-numeric:tabular-nums}
 /* empty slots keep their width so the avatars line up down the column */
-.like-ph{width:28px}.picker-ph{width:20px}
+/* [picker][♥][⋮] travel as one group of 28px slots; empty slots keep their width so columns line up down the list */
+.pick-acts{display:flex;align-items:center;gap:2px}
+.like-ph,.picker-ph{width:28px}
 .who{display:flex;align-items:center;gap:6px;min-width:0}
 .who-n{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .avatar.picker{width:20px;height:20px;font-size:11px;margin:0;border:0;align-self:center}
+.pick-acts .avatar.picker{margin:0 4px}  /* a 20px circle in a 28px slot */
 .row-more{appearance:none;border:0;background:transparent;color:var(--muted);width:28px;height:28px;padding:0;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;align-self:center}
 .row-more:hover,.row-more[aria-expanded="true"]{background:var(--paper);color:var(--ink)}
 .row-more svg{width:16px;height:16px;fill:currentColor}
@@ -1346,7 +1349,8 @@ function renderBoard(){
       mb.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="3.5" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.5" r="1.5"/></svg>';mb.onclick=()=>openRowMenu(mb,k,s);
       /* who picked it, then who likes it: [picker] ♥[liker] */
       let pk=el("span","picker-ph");if(who){pk=avatar(who,"picker");pk.title="由"+who+"挑選";pk.setAttribute("role","img");pk.setAttribute("aria-label","由"+who+"挑選")}
-      p.append(lg,tx,pk,likeBtn(k,s.t),mb);ul.append(p)});
+      const acts=el("div","pick-acts");acts.append(pk,likeBtn(k,s.t),mb);
+      p.append(lg,tx,acts);ul.append(p)});
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
   });
   document.getElementById("boardCount").textContent=total+" 首";
