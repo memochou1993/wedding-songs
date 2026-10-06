@@ -61,6 +61,11 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .nick-dlg label{font-size:13px;color:var(--muted);margin-top:4px}
 .nick-dlg input{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px}
 .nick-dlg .share-btn{align-self:flex-end;margin-top:6px}
+.nick-dlg .lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatch{appearance:none;width:36px;height:36px;border-radius:50%;border:0;padding:0;cursor:pointer;font:inherit;font-size:15px;font-weight:700;color:var(--av-ink);box-shadow:inset 0 0 0 1px var(--av-ring)}
+.swatch[aria-checked="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--ink)}
+.swatch:disabled{opacity:.35;cursor:not-allowed}
 .pick-row{display:flex;align-items:center;gap:6px;min-width:0}
 .pick-row .pick-t{min-width:0}
 .ai-badge{display:inline-block;flex:none;font-size:11px;font-weight:700;border-radius:3px;padding:0 6px;line-height:18px;white-space:nowrap}
@@ -337,6 +342,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
       <p>輸入暱稱，歌單上會標出每首歌是誰挑的。</p>
       <label for="nickInput">暱稱</label>
       <input id="nickInput" type="text" maxlength="20" autocomplete="nickname" placeholder="例如：新娘小聖" required>
+      <span class="lbl" id="swatchLbl" hidden>顏色</span>
+      <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="swatchLbl" hidden></div>
       <button class="share-btn" type="submit">開始選歌</button>
     </form>
   </dialog>
@@ -786,7 +793,7 @@ function kkLink(t,a){const x=el("a","yt kk");x.href=kkUrl(t,a);x.target="_blank"
   x.setAttribute("aria-label","在 KKBOX 搜尋 "+t);x.title="在 KKBOX 搜尋";return x}
 
 /* ---------- board state: shared db when available, this browser otherwise ---------- */
-const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{},_ai:{}});
+const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{},_ai:{},_color:{}});
 function clean(b){const out=emptyBoard(),seen=new Set();
   if(b&&typeof b==="object")Object.keys(b).forEach(ck=>{const to=COLBY[ck]?ck:OLDCOL[ck];if(!to||!Array.isArray(b[ck]))return;
     b[ck].forEach(k=>{if(songOf(k)&&!seen.has(k)){seen.add(k);out[to].push(k)}})});
@@ -800,12 +807,18 @@ function clean(b){const out=emptyBoard(),seen=new Set();
   /* _ai: list songs someone re-checked with AI; the board then shows the AI result for them, as it does for custom songs */
   const ai=b&&b._ai;
   if(ai&&typeof ai==="object")Object.keys(ai).forEach(k=>{if(seen.has(k)&&ai[k]&&!k.startsWith("c:"))out._ai[k]=1});
+  /* _color: nickname → {c: avatar colour index someone chose, t: when}; c -1 means cleared (the name was renamed away) */
+  const co=b&&b._color;
+  if(co&&typeof co==="object")Object.keys(co).forEach(n=>{const v=co[n];if(n&&n.length<=20&&v&&Number.isInteger(v.c)&&v.c>=-1&&v.c<6)out._color[n]={c:v.c,t:+v.t||0}});
   return out}
 let nickname="";try{nickname=localStorage.getItem("wedding-nickname")||""}catch(e){}
 const pickerOf=k=>board._by&&board._by[k]?board._by[k].n:"";
 /* who likes a song: anyone but its picker, with a live (positive) like */
 const likersOf=k=>{const m=board._like[k]||{};return Object.keys(m).filter(n=>m[n]>0&&n!==pickerOf(k))};
 /* keep the newer like or withdrawal per person from a board saved elsewhere, for songs still on this board */
+/* chosen colours from a board saved elsewhere: per person, the newer choice wins */
+function mergeColors(b,remote){const r=remote&&remote._color;if(!r||typeof r!=="object")return;
+  Object.keys(r).forEach(n=>{const v=r[n];if(v&&Number.isInteger(v.c)&&v.c>=-1&&v.c<6&&(+v.t||0)>(b._color[n]?.t||0))b._color[n]={c:v.c,t:+v.t||0}})}
 function mergeLikes(b,remote){const r=remote&&remote._like;if(!r||typeof r!=="object")return;
   Object.keys(r).forEach(k=>{if(!COLS.some(c=>b[c.k].includes(k))||!r[k]||typeof r[k]!=="object")return;
     const m=b._like[k]||{};Object.keys(r[k]).forEach(n=>{const t=+r[k][n];if(t&&Math.abs(t)>Math.abs(m[n]||0))m[n]=t});
@@ -907,21 +920,39 @@ function renameIn(b,from,to){let changed=false;
   Object.values(b._like).forEach(m=>{if(!(from in m))return;
     if(!(to in m)||Math.abs(m[from])>Math.abs(m[to]))m[to]=m[from];
     m[from]=-Math.abs(m[from]);changed=true});  // withdraw the old name's like, so merging with an older save can't revive it
+  const c=b._color[from];
+  if(c&&c.c>=0){if(!(b._color[to]?.c>=0))b._color[to]={c:c.c,t:c.t};b._color[from]={c:-1,t:Date.now()};changed=true}
   return changed}
 function setupNickname(){
   if(!boardId)return;
   const dlg=document.getElementById("nickDlg"),form=document.getElementById("nickForm"),inp=document.getElementById("nickInput");
-  openNickname=()=>{inp.value=nickname;openDialog(dlg);focusField(inp)};
+  /* colour swatches: yours shows your initial, ones other people use are faded with theirs and can't be picked */
+  const sw=document.getElementById("swatches");let pick=-1;
+  const drawSwatches=()=>{sw.replaceChildren();const me=inp.value.trim()||nickname||"?";
+    const owner={};if(!colorMap)colorMap=buildColorMap();Object.keys(colorMap).forEach(n=>{if(n!==nickname&&n!==me)owner[colorMap[n]]=n});
+    AVATAR_COLORS.forEach((c,i)=>{const b=el("button","swatch");b.type="button";b.style.background="var("+c+")";b.setAttribute("role","radio");
+      const on=i===pick,who=owner[i];b.setAttribute("aria-checked",String(on));
+      if(who&&!on){b.disabled=true;b.textContent=[...who][0];b.title=who+"在用";b.setAttribute("aria-label",who+"在用")}
+      else{if(on)b.textContent=[...me][0];b.setAttribute("aria-label","顏色 "+(i+1));b.onclick=()=>{pick=i;drawSwatches()}}
+      sw.append(b)})};
+  inp.addEventListener("input",drawSwatches);
+  /* start on the colour you already show; a newcomer starts on the one they would be given, which isn't saved unless changed */
+  const shownIdx=n=>{if(!colorMap)colorMap=buildColorMap();const m=Object.assign({},colorMap);if(!(n in m))assignColor(m,n);return m[n]};
+  openNickname=()=>{inp.value=nickname;pick=shownIdx(nickname||"?");
+    document.getElementById("swatchLbl").hidden=sw.hidden=false;drawSwatches();openDialog(dlg);focusField(inp)};
   dlg.addEventListener("cancel",e=>{if(!nickname)e.preventDefault()});
   form.addEventListener("submit",e=>{e.preventDefault();const v=inp.value.trim().slice(0,20);if(!v)return;
     const old=nickname;nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}
-    if(old&&old!==v&&renameIn(board,old,v))persist();
+    let dirtyBoard=old&&old!==v&&renameIn(board,old,v);
+    colorMap=null;if(pick!==shownIdx(v)){board._color[v]={c:pick,t:Date.now()};dirtyBoard=true}
+    if(dirtyBoard)persist();
     dlg.close();trackMe();render()});
   if(!nickname)openNickname();
 }
 /* avatars: first character on a colour derived from the nickname, so each person keeps one colour */
-/* each person keeps a colour from their name, but on a board the first six people never share one:
-   in order of first pick or like, a taken colour moves on to the next free one. The board data decides the order, so every viewer agrees. */
+/* a colour someone chose comes first (if two chose the same one, the earlier choice keeps it); everyone else keeps a colour
+   from their name, but on a board the first six people never share one: in order of first pick or like, a taken colour
+   moves on to the next free one. The board data decides all of this, so every viewer agrees. */
 const AVATAR_COLORS=["--av-strawberry","--av-peach","--av-lemon","--av-pistachio","--av-sky","--av-lavender"];
 let colorMap=null;  // name → index, rebuilt on each render
 function hashIdx(n){let h=0;for(const ch of n)h=(h*31+ch.codePointAt(0))>>>0;return h%AVATAR_COLORS.length}
@@ -930,7 +961,9 @@ function assignColor(map,n){const used=new Set(Object.values(map)),L=AVATAR_COLO
 function buildColorMap(){const first={},see=(n,t)=>{if(n&&!(t>=first[n]))first[n]=t};
   Object.values(board._by).forEach(v=>see(v.n,v.t||0));
   Object.values(board._like).forEach(m=>Object.keys(m).forEach(n=>{if(m[n]>0)see(n,m[n])}));
-  const map={};Object.keys(first).sort((a,b)=>first[a]-first[b]||(a<b?-1:1)).forEach(n=>assignColor(map,n));return map}
+  const map={},used=new Set();
+  Object.keys(board._color).sort((a,b)=>board._color[a].t-board._color[b].t||(a<b?-1:1)).forEach(n=>{const c=board._color[n].c;if(c>=0&&!used.has(c)){map[n]=c;used.add(c)}});
+  Object.keys(first).sort((a,b)=>first[a]-first[b]||(a<b?-1:1)).forEach(n=>{if(!(n in map))assignColor(map,n)});return map}
 function colorOf(n){if(!colorMap)colorMap=buildColorMap();if(!(n in colorMap))assignColor(colorMap,n);return AVATAR_COLORS[colorMap[n]]}
 function avatar(n,cls){const a=el("span","avatar"+(cls?" "+cls:""),[...n][0]||"?"),c=colorOf(n);
   a.style.background="var("+c+")";return a}
@@ -983,7 +1016,8 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
   remoteSave=async b=>{
     /* the whole board is overwritten, so first fold in likes saved by others meanwhile */
     const cur=await sb.from("boards").select("cols").eq("id",boardId).maybeSingle();
-    if(cur.data){const before=JSON.stringify(b._like);mergeLikes(b,cur.data.cols);if(JSON.stringify(b._like)!==before){saveLocal();render()}}
+    if(cur.data){const before=JSON.stringify([b._like,b._color]);mergeLikes(b,cur.data.cols);mergeColors(b,cur.data.cols);
+      if(JSON.stringify([b._like,b._color])!==before){saveLocal();render()}}
     const {error}=await sb.from("boards").upsert({id:boardId,cols:b,updated_at:new Date().toISOString()});
     if(error)throw error;
     chan.send({type:"broadcast",event:"updated",payload:{}}).catch(()=>{});
