@@ -952,7 +952,7 @@ function aiBadge(s){
   if(!x)return b("查不到","muted","AI 查不到這首歌");
   const [label,cls]=x.is_landmine?["地雷","no"]:VERDICT[x.wedding_verdict]||["已查詢","muted"];
   const low=lowConf(x);
-  return b(label+(low?"？":""),cls,"AI 判斷："+(VERDICT[x.wedding_verdict]||["已查詢"])[0]+(low?"（找不到足夠的歌詞說明，僅供參考）":"")+"。點歌名看詳細結果");
+  return b(label,cls,"AI 判斷："+(VERDICT[x.wedding_verdict]||["已查詢"])[0]+(low?"（找不到足夠的歌詞說明，僅供參考）":"")+"。點歌名看詳細結果");
 }
 function openAi(s,k){
   /* the result is laid out with the same card() as the song list, minus the board controls */
