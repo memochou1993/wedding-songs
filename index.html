@@ -18,9 +18,9 @@
   --hong:#b3202f;  --hong-soft:#f6e4e5; --gold:#9a7428; --gold-soft:#f3ecdc;
   --warn:#8a5a00; --warn-soft:#fbf1d9; --no:#8f1d29; --no-soft:#f8e3e5;
   --l-en:#2f5d8a; --l-tw:#2e7a55; --l-jp:#b8571c; --l-kr:#5a4aa3; --on-hong:#ffffff; --tag:#ebe6ec; --tag-ink:#3d3542; --dash:#b3a9b2; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6470' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  /* people: vivid avatar colours, the same in both themes; --av-ink is the dark initial on the light ones */
-  --av-red:#f03a47; --av-orange:#ff8a00; --av-yellow:#ffc800; --av-lime:#7ed321; --av-green:#12b76a;
-  --av-cyan:#00b8d9; --av-blue:#2970ff; --av-violet:#7a5af8; --av-magenta:#d444f1; --av-pink:#ff4d94; --av-ink:#1a1016;
+  /* people: bright macaron avatar colours, the same in both themes, with a dark initial; --av-ring edges the pale ones on white */
+  --av-strawberry:#ff8fab; --av-peach:#ffb067; --av-lemon:#ffde59; --av-pistachio:#7fdc9c; --av-sky:#6ec3ff; --av-lavender:#b49cff;
+  --av-ink:#1a1016; --av-ring:rgba(31,27,36,.14);
   --display:"Noto Serif TC","Songti TC","PMingLiU",serif;
   --body:"Noto Sans TC","PingFang TC","Hiragino Sans","Apple SD Gothic Neo","Microsoft JhengHei",system-ui,sans-serif;
   --shadow:0 1px 2px rgba(40,20,30,.06);
@@ -30,13 +30,13 @@
   --hong:#ef6b74; --hong-soft:#3a1e24; --gold:#d9b46a; --gold-soft:#332a1a;
   --warn:#e9b955; --warn-soft:#33290f; --no:#f08a93; --no-soft:#3a1d22;
   --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#f19a5c; --l-kr:#ada1ee; --on-hong:#1a0d10; --tag:#2d2732; --tag-ink:#d9d1dc; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  --shadow:none; color-scheme:dark}}
+  --shadow:none; --av-ring:transparent; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38;
   --hong:#ef6b74; --hong-soft:#3a1e24; --gold:#d9b46a; --gold-soft:#332a1a;
   --warn:#e9b955; --warn-soft:#33290f; --no:#f08a93; --no-soft:#3a1d22;
   --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#f19a5c; --l-kr:#ada1ee; --on-hong:#1a0d10; --tag:#2d2732; --tag-ink:#d9d1dc; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  --shadow:none; color-scheme:dark}
+  --shadow:none; --av-ring:transparent; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.65;margin:0}
@@ -53,7 +53,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .share-btn{appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--on-hong);background:var(--hong);border:1px solid var(--hong);border-radius:999px;padding:8px 18px;cursor:pointer;white-space:nowrap}
 .share-btn:hover{opacity:.9}
 .people{display:flex;align-items:center}
-.avatar{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:700;color:var(--on-hong);border:2px solid var(--paper);margin-left:-8px;flex:none;user-select:none}
+.avatar{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:700;color:var(--av-ink);box-shadow:inset 0 0 0 1px var(--av-ring);border:2px solid var(--paper);margin-left:-8px;flex:none;user-select:none}
 .people>.avatar:first-child,.people>.me:first-child .avatar{margin-left:0}
 .avatar.more{background:var(--line);color:var(--ink);font-size:12px}
 /* green dot = online now */
@@ -929,10 +929,9 @@ function setupNickname(){
   if(!nickname)openNickname();
 }
 /* avatars: first character on a colour derived from the nickname, so each person keeps one colour */
-/* each person keeps a colour from their name, but on a board the first ten people never share one:
+/* each person keeps a colour from their name, but on a board the first six people never share one:
    in order of first pick or like, a taken colour moves on to the next free one. The board data decides the order, so every viewer agrees. */
-const AVATAR_COLORS=["--av-red","--av-orange","--av-yellow","--av-lime","--av-green","--av-cyan","--av-blue","--av-violet","--av-magenta","--av-pink"];
-const AVATAR_WHITE=new Set(["--av-blue","--av-violet"]);  // the rest read better with a dark initial
+const AVATAR_COLORS=["--av-strawberry","--av-peach","--av-lemon","--av-pistachio","--av-sky","--av-lavender"];
 let colorMap=null;  // name → index, rebuilt on each render
 function hashIdx(n){let h=0;for(const ch of n)h=(h*31+ch.codePointAt(0))>>>0;return h%AVATAR_COLORS.length}
 function assignColor(map,n){const used=new Set(Object.values(map)),L=AVATAR_COLORS.length;let i=hashIdx(n);
@@ -943,7 +942,7 @@ function buildColorMap(){const first={},see=(n,t)=>{if(n&&!(t>=first[n]))first[n
   const map={};Object.keys(first).sort((a,b)=>first[a]-first[b]||(a<b?-1:1)).forEach(n=>assignColor(map,n));return map}
 function colorOf(n){if(!colorMap)colorMap=buildColorMap();if(!(n in colorMap))assignColor(colorMap,n);return AVATAR_COLORS[colorMap[n]]}
 function avatar(n,cls){const a=el("span","avatar"+(cls?" "+cls:""),[...n][0]||"?"),c=colorOf(n);
-  a.style.background="var("+c+")";a.style.color=AVATAR_WHITE.has(c)?"#fff":"var(--av-ink)";return a}
+  a.style.background="var("+c+")";return a}
 /* presence: who has this board open right now (Supabase realtime presence) */
 let presenceChan=null;
 const CLIENT_ID=Math.random().toString(36).slice(2,10);
