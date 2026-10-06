@@ -14,7 +14,7 @@
 <style>
 /* Layout: header, then song column (custom card, filter bar, card grid) beside the sticky playlist board; trap songs set apart at the end like a fine-print notice on a 喜帖. */
 :root{
-  --paper:#f7f6f3; --card:#ffffff; --ink:#1f1b24; --muted:#6b6470; --line:#e4dfe3;
+  --paper:#f7f6f3; --card:#ffffff; --ink:#1f1b24; --muted:#6b6470; --line:#e4dfe3; --hover:#f2eff1;
   --hong:#b3202f;  --hong-soft:#f6e4e5; --gold:#9a7428; --gold-soft:#f3ecdc;
   --warn:#8a5a00; --warn-soft:#fbf1d9; --no:#8f1d29; --no-soft:#f8e3e5;
   --l-en:#2f5d8a; --l-tw:#2e7a55; --l-jp:#b8571c; --l-kr:#5a4aa3; --on-hong:#ffffff; --tag:#ebe6ec; --tag-ink:#3d3542; --dash:#b3a9b2; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6470' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -26,13 +26,13 @@
   --shadow:0 1px 2px rgba(40,20,30,.06);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38;
+  --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38; --hover:#2c2732;
   --hong:#ef6b74; --hong-soft:#3a1e24; --gold:#d9b46a; --gold-soft:#332a1a;
   --warn:#e9b955; --warn-soft:#33290f; --no:#f08a93; --no-soft:#3a1d22;
   --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#f19a5c; --l-kr:#ada1ee; --on-hong:#1a0d10; --tag:#2d2732; --tag-ink:#d9d1dc; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --shadow:none; --av-ring:transparent; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38;
+  --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38; --hover:#2c2732;
   --hong:#ef6b74; --hong-soft:#3a1e24; --gold:#d9b46a; --gold-soft:#332a1a;
   --warn:#e9b955; --warn-soft:#33290f; --no:#f08a93; --no-soft:#3a1d22;
   --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#f19a5c; --l-kr:#ada1ee; --on-hong:#1a0d10; --tag:#2d2732; --tag-ink:#d9d1dc; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -261,11 +261,11 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .avatar.picker{width:20px;height:20px;font-size:11px;margin:0;border:0;align-self:center}
 .pick-acts .avatar.picker{margin:0 4px}  /* a 20px circle in a 28px slot */
 .row-more{appearance:none;border:0;background:transparent;color:var(--muted);width:28px;height:28px;padding:0;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;align-self:center}
-.row-more:hover,.row-more[aria-expanded="true"]{background:var(--paper);color:var(--ink)}
+.row-more:hover,.row-more[aria-expanded="true"]{background:var(--hover);color:var(--ink)}
 .row-more svg{width:16px;height:16px;fill:currentColor}
 .row-menu{position:fixed;inset:auto;margin:0;padding:4px;min-width:168px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(20,10,15,.18)}
 .menu-i{display:flex;align-items:center;gap:10px;width:100%;appearance:none;border:0;background:transparent;font:inherit;font-size:14px;color:var(--ink);text-decoration:none;text-align:left;padding:8px 10px;border-radius:5px;cursor:pointer}
-.menu-i:hover,.menu-i:focus-visible{background:var(--paper);outline:none}
+.menu-i:hover,.menu-i:focus-visible{background:var(--hover);outline:none}
 .menu-i svg{width:15px;height:15px;fill:var(--hong);flex:none}
 .menu-i .kk-mark{flex:none}
 .menu-i.danger{color:var(--no);border-top:1px solid var(--line);border-radius:0 0 5px 5px;margin-top:4px}
