@@ -793,9 +793,20 @@ function siteName(u){let h="";try{h=new URL(u).hostname.replace(/^www\./,"")}cat
   const p=h.split(".");return p.slice(SLD.has(p.slice(-2).join("."))?-3:-2).join(".")}
 function srcChip(u){const a=el("a","src-chip",siteName(u));a.href=u;a.target="_blank";a.rel="noopener";a.title=u;a.append(el("span","src-arrow","↗"));return a}
 const ytUrl=(t,a)=>"https://www.youtube.com/results?search_query="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
+/* iPhone: youtube.com links never open the YouTube app there (Android's do), so a tap goes through youtube:// instead,
+   falling back to the web page if the app hasn't taken over by then. The href stays a normal link for copying. */
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+function openInYouTubeApp(e){
+  if(!isIOS||e.defaultPrevented||e.button>0||e.metaKey||e.ctrlKey)return;
+  e.preventDefault();const web=e.currentTarget.href;
+  const t=setTimeout(()=>{stop();window.open(web,"_blank","noopener")},2500);
+  const stop=()=>{clearTimeout(t);removeEventListener("pagehide",stop);removeEventListener("blur",stop);document.removeEventListener("visibilitychange",stop)};
+  addEventListener("pagehide",stop);addEventListener("blur",stop);document.addEventListener("visibilitychange",stop);
+  location.href=web.replace(/^https:\/\//,"youtube://");
+}
 function ytLink(t,a){const x=el("a","yt");x.href=ytUrl(t,a);x.target="_blank";x.rel="noopener";
   x.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';x.append("YouTube");
-  x.setAttribute("aria-label","在 YouTube 搜尋 "+t);x.title="在 YouTube 搜尋";return x}
+  x.setAttribute("aria-label","在 YouTube 搜尋 "+t);x.title="在 YouTube 搜尋";x.addEventListener("click",openInYouTubeApp);return x}
 const kkUrl=(t,a)=>"https://www.kkbox.com/tw/tc/search?q="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
 /* with a track id the link goes to the song page, which phones with KKBOX open in the app (search pages stay in the browser) */
 function kkLink(t,a,id){const x=el("a","yt kk");x.href=id?"https://www.kkbox.com/tw/tc/song/"+id:kkUrl(t,a);x.target="_blank";x.rel="noopener";
