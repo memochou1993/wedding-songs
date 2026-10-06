@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
-/* Layout: a wedding-day timeline of scenes on top, filter bar, then a card grid; trap songs set apart at the end like a fine-print notice on a 喜帖. */
+/* Layout: header, then song column (custom card, filter bar, card grid) beside the sticky playlist board; trap songs set apart at the end like a fine-print notice on a 喜帖. */
 :root{
   --paper:#f7f6f3; --card:#ffffff; --ink:#1f1b24; --muted:#6b6470; --line:#e4dfe3;
   --hong:#b3202f;  --hong-soft:#f6e4e5; --gold:#9a7428; --gold-soft:#f3ecdc;
@@ -36,11 +36,16 @@ button{font:inherit;color:inherit}
 
 header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"xi text share";gap:20px;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--line)}
 .xi{grid-area:xi}.head-text{grid-area:text;min-width:0}
-.head-share{grid-area:share;align-self:start;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.head-share{grid-area:share;align-self:start;display:flex;align-items:center;gap:12px}
 .share-btn{appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--on-hong);background:var(--hong);border:1px solid var(--hong);border-radius:999px;padding:8px 18px;cursor:pointer;white-space:nowrap}
 .share-btn:hover{opacity:.9}
-.nick-btn{appearance:none;border:0;background:transparent;font:inherit;font-size:12px;color:var(--muted);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
-.nick-btn:hover{color:var(--ink)}
+.people{display:flex;align-items:center}
+.avatar{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:700;color:var(--on-hong);border:2px solid var(--paper);margin-left:-8px;flex:none;user-select:none}
+.people>.avatar:first-child,.people>.me:first-child .avatar{margin-left:0}
+.avatar.more{background:var(--line);color:var(--ink);font-size:12px}
+.me{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;border-radius:50%;margin-left:10px}
+.me .avatar.self{margin-left:0;box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--ink)}
+.me:hover .avatar.self{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--hong)}
 .nick-dlg{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:24px;width:min(360px,calc(100vw - 32px))}
 .nick-dlg::backdrop{background:rgba(20,10,15,.55)}
 .nick-dlg form{display:flex;flex-direction:column;gap:10px}
@@ -50,29 +55,24 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .nick-dlg input{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px}
 .nick-dlg .share-btn{align-self:flex-end;margin-top:6px}
 .pick-by{color:var(--gold)}
-.share-url{font:inherit;font-size:12px;width:min(260px,70vw);color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.board-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px;overflow-wrap:anywhere;user-select:all}
+.share-row{display:flex;gap:8px}
+.share-row input{flex:1;min-width:0}
+.dlg-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px}
+.dlg-actions .share-btn{margin-top:0}
+.dlg-actions .chip,.dlg-actions .share-btn,.share-row .chip,.share-row input{height:40px;box-sizing:border-box}
+.dlg-actions .chip,.dlg-actions .share-btn,.share-row .chip{display:inline-flex;align-items:center;justify-content:center;padding:0 18px;font-size:14px}
 .xi{font-family:var(--display);font-weight:900;font-size:64px;line-height:1;color:var(--hong);border:2px solid var(--hong);width:92px;height:92px;display:grid;place-items:center;border-radius:4px}
 header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02em}
 .lede{color:var(--muted);margin:8px 0 0;max-width:62ch}
 .stats{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .stats b{color:var(--ink);font-weight:700}
 
-.section-label{font-size:12px;letter-spacing:.14em;color:var(--gold);font-weight:700;margin:32px 0 12px}
+.filters{margin-top:24px}
 
-/* timeline */
-.timeline{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
-.step{appearance:none;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:12px 12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0;box-shadow:var(--shadow);transition:border-color .15s,background .15s}
-.step:hover{border-color:var(--hong)}
-.step[aria-pressed="true"]{background:var(--hong);border-color:var(--hong);color:var(--on-hong)}
-.step[aria-pressed="true"] .step-n,.step[aria-pressed="true"] .step-d{color:var(--on-hong);opacity:.85}
-.step-n{font-size:11px;color:var(--gold);font-variant-numeric:tabular-nums;letter-spacing:.08em}
-.step-t{font-family:var(--display);font-weight:700;font-size:18px}
-.step-d{font-size:12px;color:var(--muted);line-height:1.5}
-.step-c{font-size:12px;font-variant-numeric:tabular-nums}
-.tl-note{font-size:12px;color:var(--muted);margin-top:8px}
 
 /* filters */
-.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding-block:12px;margin-top:20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding-block:12px;margin-top:12px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
 .group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .group-l{font-size:12px;color:var(--muted);margin-right:2px}
 .chip{appearance:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
@@ -110,7 +110,7 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .kk.yt-s:hover{background:var(--gold-soft)}
 .trap .act{margin-top:8px}.trap .yt{margin-top:0}
 .trap .yt{margin-top:8px;background:var(--card)}
-.empty{padding:40px 0;color:var(--muted);text-align:center}
+.empty{padding:40px 0;color:var(--muted);text-align:center;grid-column:1/-1}
 
 /* traps */
 .traps{margin-top:56px;border-top:2px solid var(--no);padding-top:20px}
@@ -134,23 +134,22 @@ footer li{overflow-wrap:anywhere;break-inside:avoid}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start;margin-top:20px}
 .main{min-width:0}
 .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
-.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);max-height:calc(100vh - 92px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
-.board-h{padding:14px 14px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
+.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+.board-h{padding:14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
+.board-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .board-h h2{font-size:18px}
 .board-h h2 span{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
-.board-hint{font-size:12px;color:var(--muted);margin:4px 0 8px}
-.board-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .sync{font-size:12px;color:var(--muted)}
 .sync[data-m="shared"],.sync[data-m="link"]{color:var(--l-tw)}
 .sync[data-m="error"],.sync[data-m="readonly"]{color:var(--warn)}
-.copy-fb{width:100%;min-height:120px;margin-top:8px;font:inherit;font-size:12px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px}
 .cols{display:flex;flex-direction:column;gap:8px;padding:10px}
 .col{border:1.5px dashed var(--line);border-radius:6px;padding:8px;transition:border-color .12s,background .12s}
 .col.maybe{background:var(--gold-soft);border-color:transparent}
 .col.over{border-color:var(--hong);border-style:solid;background:var(--hong-soft)}
 body.is-dragging .col{border-color:var(--muted)}
 body.is-dragging .col.over{border-color:var(--hong)}
-.col-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:6px}
+.col-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.col-h{margin-bottom:6px}
 .col-t{font-family:var(--display);font-weight:700;font-size:15px}
 .col.maybe .col-t{color:var(--gold)}
 .col-code{font-family:var(--body);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--paper);background:var(--ink);border-radius:3px;padding:0 5px;margin-right:6px;vertical-align:2px}
@@ -159,8 +158,9 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .col-tag{appearance:none;border:0;background:transparent;color:var(--hong);font-size:12px;padding:0;cursor:pointer;margin-left:auto;text-decoration:underline;text-underline-offset:2px}
 .col-n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .col-d{font-size:12px;color:var(--muted);flex-basis:100%}
-.col-list{display:flex;flex-direction:column;gap:4px;min-height:28px}
-.col-empty{font-size:12px;color:var(--muted);padding:4px 2px}
+.col-list{display:flex;flex-direction:column;gap:4px}
+.col.is-empty .col-list{display:none}
+.col.is-empty .col-h{margin-bottom:0}
 .pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
 .pick-tx{display:flex;flex-direction:column;min-width:0;line-height:1.3}
 .pick-t{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -171,7 +171,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .yt-s{align-self:center;padding:0;width:28px;height:28px;justify-content:center;border-color:transparent;border-radius:4px}
 .yt-s:hover{background:var(--hong-soft);border-color:transparent}
 .dragging{opacity:.45}
-.custom-card{margin-bottom:12px;border-style:dashed;border-color:var(--gold);cursor:default}
+.custom-card{border-style:dashed;border-color:var(--gold);cursor:default}
 .custom-card.ready{cursor:grab;border-style:solid}
 .custom-fields{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 10px;align-items:center}
 .custom-fields label{font-size:13px;color:var(--muted)}
@@ -192,13 +192,11 @@ body.is-dragging .col.over{border-color:var(--hong)}
   .board-h{position:static}
   .cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 }
-@media (max-width:900px){.timeline{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:560px){
   .wrap{padding-inline:16px;padding-block:24px 48px}
   header.top{grid-template-columns:auto 1fr;grid-template-areas:"xi share" "text text";gap:14px}
   .head-share{align-self:center}
   .xi{width:64px;height:64px;font-size:44px}
-  .timeline{grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid,.trap-list{grid-template-columns:1fr}
   footer ul{columns:1}
 }
@@ -214,9 +212,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
       <div class="stats" id="stats"></div>
     </div>
     <div class="head-share" id="headShare" hidden>
+      <div class="people" id="people" aria-label="正在看這份歌單的人"></div>
       <button class="share-btn" id="shareBtn" type="button">分享歌單</button>
-      <button class="nick-btn" id="nickBtn" type="button"></button>
-      <input class="share-url" id="shareUrl" type="text" readonly hidden aria-label="歌單網址">
     </div>
   </header>
 
@@ -230,16 +227,23 @@ body.is-dragging .col.over{border-color:var(--hong)}
     </form>
   </dialog>
 
-  <div class="section-label">歌曲適合的類型 · 點選篩選</div>
-  <div class="timeline" id="timeline"></div>
-  <p class="tl-note">這是歌曲本身適合的氛圍分類。實際的流程階段在右邊的歌單，每個階段可以點「看推薦」找對應類型的歌。</p>
-
-  <div class="bar" role="search">
-    <div class="group" id="langs"><span class="group-l">語言</span></div>
-    <div class="group" id="kinds"><span class="group-l">類型</span></div>
-    <button class="chip" id="onlyPicked" type="button" aria-pressed="false">只看已加入歌單</button>
-    <input class="search" id="q" type="search" placeholder="搜尋歌名、歌手、歌詞大意" aria-label="搜尋">
-  </div>
+  <dialog class="nick-dlg" id="shareDlg" aria-labelledby="shareTitle">
+    <form method="dialog">
+      <h2 id="shareTitle">分享歌單</h2>
+      <p>把網址傳給另一半或婚顧，打開就能一起編輯這份歌單。</p>
+      <label>歌單 ID</label>
+      <code class="board-id" id="shareId"></code>
+      <label for="shareUrl">網址</label>
+      <div class="share-row">
+        <input id="shareUrl" type="text" readonly>
+        <button class="chip" id="copyUrl" type="button" autofocus>複製</button>
+      </div>
+      <div class="dlg-actions">
+        <button class="chip" id="nativeShare" type="button" hidden>用其他 App 傳送</button>
+        <button class="share-btn" value="close">完成</button>
+      </div>
+    </form>
+  </dialog>
 
   <div class="layout">
     <div class="main">
@@ -251,15 +255,22 @@ body.is-dragging .col.over{border-color:var(--hong)}
         </div>
         <div class="act" id="customAct"></div>
       </article>
+      <section class="filters" aria-label="篩選歌曲">
+        <div class="bar" role="search">
+          <div class="group" id="scenes"><span class="group-l">類型</span></div>
+          <div class="group" id="langs"><span class="group-l">語言</span></div>
+          <div class="group" id="kinds"><span class="group-l">時期</span></div>
+          <button class="chip" id="onlyPicked" type="button" aria-pressed="false">只看已加入歌單</button>
+          <input class="search" id="q" type="search" placeholder="搜尋歌名、歌手、歌詞大意" aria-label="搜尋">
+        </div>
+      </section>
       <div class="count" id="count"></div>
       <div class="grid" id="grid"></div>
     </div>
     <aside class="board" aria-label="我的婚禮歌單">
       <div class="board-h">
         <h2>我的婚禮歌單 <span id="boardCount"></span></h2>
-        <p class="board-hint">階段依照「流程音樂（MP3）」資料夾。把左邊的歌曲卡片拖進來，或用卡片下方的選單加入；歌單裡的歌也可以拖曳換位置。</p>
-        <div class="board-tools"><span class="sync" id="sync"></span><button class="chip" id="copyBoard" type="button">複製歌單文字</button></div>
-        <textarea id="copyFallback" class="copy-fb" hidden readonly aria-label="歌單文字"></textarea>
+        <span class="sync" id="sync"></span>
       </div>
       <div class="cols" id="cols"></div>
     </aside>
@@ -558,28 +569,44 @@ function move(k,col,before){
 }
 setSync("local");
 /* share: the board id is already in the URL, so sharing is sending this address */
+let openNickname=()=>{};
 function setupNickname(){
   if(!boardId)return;
-  const dlg=document.getElementById("nickDlg"),form=document.getElementById("nickForm"),inp=document.getElementById("nickInput"),btn=document.getElementById("nickBtn");
-  const show=()=>{btn.textContent="我是 "+nickname+" · 改暱稱";btn.title="修改暱稱"};
-  const open=()=>{inp.value=nickname;dlg.showModal();inp.focus()};
+  const dlg=document.getElementById("nickDlg"),form=document.getElementById("nickForm"),inp=document.getElementById("nickInput");
+  openNickname=()=>{inp.value=nickname;dlg.showModal();inp.focus()};
   dlg.addEventListener("cancel",e=>{if(!nickname)e.preventDefault()});
   form.addEventListener("submit",e=>{e.preventDefault();const v=inp.value.trim().slice(0,20);if(!v)return;
-    nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}show();dlg.close();render()});
-  btn.onclick=open;
-  if(nickname)show();else{btn.textContent="設定暱稱";open()}
+    nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}dlg.close();trackMe();renderPeople();render()});
+  if(!nickname)openNickname();
+}
+/* avatars: first character on a colour derived from the nickname, so each person keeps one colour */
+const AVATAR_COLORS=["--hong","--l-en","--l-tw","--l-jp","--l-kr","--gold"];
+function colorOf(n){let h=0;for(const ch of n)h=(h*31+ch.codePointAt(0))>>>0;return "var("+AVATAR_COLORS[h%AVATAR_COLORS.length]+")"}
+function avatar(n,cls){const a=el("span","avatar"+(cls?" "+cls:""),[...n][0]||"?");a.style.background=colorOf(n);return a}
+/* presence: who has this board open right now (Supabase realtime presence) */
+let presenceChan=null;
+const CLIENT_ID=Math.random().toString(36).slice(2,10);
+function trackMe(){if(presenceChan&&nickname)presenceChan.track({n:nickname,c:CLIENT_ID}).catch(()=>{})}
+function renderPeople(){
+  const box=document.getElementById("people");if(!box)return;box.replaceChildren();
+  const others=new Set();
+  if(presenceChan)Object.values(presenceChan.presenceState()).flat().forEach(m=>{if(m&&m.n&&m.c!==CLIENT_ID&&m.n!==nickname)others.add(m.n)});
+  const list=[...others];
+  const MAX=4;
+  list.slice(0,MAX).forEach(n=>{const a=avatar(n);a.title=n+"（正在看）";a.setAttribute("role","img");a.setAttribute("aria-label",n+" 正在看");box.append(a)});
+  if(list.length>MAX){const more=el("span","avatar more","+"+(list.length-MAX));more.title=list.slice(MAX).join("、");box.append(more)}
+  if(nickname){const me=el("button","me");me.type="button";me.title="這是你。點一下修改暱稱";me.setAttribute("aria-label","你是"+nickname+"，點一下修改暱稱");
+    me.append(avatar(nickname,"self"));me.onclick=()=>openNickname();box.append(me)}
 }
 function setupShare(){
   if(!boardId)return;
-  const box=document.getElementById("headShare"),btn=document.getElementById("shareBtn"),inp=document.getElementById("shareUrl");
-  box.hidden=false;
-  const label=t=>{btn.textContent=t;setTimeout(()=>btn.textContent="分享歌單",2000)};
-  btn.onclick=async()=>{
-    const url=location.href;
-    if(navigator.share&&matchMedia("(pointer:coarse)").matches){try{await navigator.share({title:"婚禮選歌板",text:"一起來排婚禮歌單",url});return}catch(e){if(e&&e.name==="AbortError")return}}
-    try{await navigator.clipboard.writeText(url);label("已複製網址")}
-    catch(_){inp.hidden=false;inp.value=url;inp.select();label("請複製下方網址")}
-  };
+  document.getElementById("headShare").hidden=false;
+  const dlg=document.getElementById("shareDlg"),inp=document.getElementById("shareUrl"),copy=document.getElementById("copyUrl"),native=document.getElementById("nativeShare");
+  document.getElementById("shareId").textContent=boardId;
+  native.hidden=!navigator.share;
+  document.getElementById("shareBtn").onclick=()=>{inp.value=location.href;copy.textContent="複製";dlg.showModal();inp.scrollLeft=0};
+  copy.onclick=async()=>{try{await navigator.clipboard.writeText(inp.value);copy.textContent="已複製"}catch(_){inp.focus();inp.select();copy.textContent="請按 ⌘C 複製"}};
+  native.onclick=async()=>{try{await navigator.share({title:"婚禮選歌板",text:"一起來排婚禮歌單",url:inp.value})}catch(_){}};
 }
 function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 (async()=>{
@@ -614,7 +641,10 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
     else if(initial&&COLS.some(c=>board[c.k].length)){dirty=true;flush();return}
     if(!dirty&&!writing)setSync("link");
   }
-  chan.on("broadcast",{event:"updated"},()=>pull(false)).subscribe();
+  presenceChan=chan;
+  chan.on("broadcast",{event:"updated"},()=>pull(false))
+    .on("presence",{event:"sync"},renderPeople)
+    .subscribe(status=>{if(status==="SUBSCRIBED")trackMe()});
   /* phones drop the realtime socket in the background, so also re-check on return and every 15s */
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull(false)});
   window.addEventListener("pageshow",e=>{if(e.persisted)pull(false)});
@@ -666,16 +696,11 @@ function makeDrop(zone,col){
   add(SONGS.length,"首推薦");LANGS.forEach(L=>add(SONGS.filter(s=>s.l===L.k).length,L.k));add(TRAPS.length,"首地雷歌");
 })();
 
-// timeline
-const tl=document.getElementById("timeline");
-SCENES.forEach((sc,i)=>{
-  const b=el("button","step");b.type="button";b.setAttribute("aria-pressed","false");b.dataset.k=sc.k;
-  b.append(el("span","step-t",sc.k),el("span","step-d",sc.d),el("span","step-c",""));
-  b.onclick=()=>{state.scene=state.scene===sc.k?null:sc.k;render()};tl.append(b);
-});
 function chipGroup(id,items,field){const g=document.getElementById(id);
   items.forEach(v=>{const c=el("button","chip",v);c.type="button";c.setAttribute("aria-pressed","false");c.dataset.v=v;
     c.onclick=()=>{state[field]=state[field]===v?null:v;render()};g.append(c)})}
+chipGroup("scenes",SCENES.map(x=>x.k),"scene");
+SCENES.forEach(sc=>{const c=document.querySelector('#scenes .chip[data-v="'+sc.k+'"]');if(c)c.title=sc.d});
 chipGroup("langs",LANGS.map(x=>x.k),"lang");
 chipGroup("kinds",["經典","近年流行"],"kind");
 document.getElementById("onlyPicked").onclick=()=>{state.picked=!state.picked;render()};
@@ -725,7 +750,7 @@ function renderBoard(){
   const wrap=document.getElementById("cols");wrap.replaceChildren();
   let total=0;
   COLS.forEach(c=>{
-    const z=el("div","col"+(c.k==="候選"?" maybe":""));z.dataset.col=c.k;
+    const z=el("div","col"+(c.k==="候選"?" maybe":"")+(board[c.k].length?"":" is-empty"));z.dataset.col=c.k;
     const hd=el("div","col-h");const n=board[c.k].length;
     const ct=el("span","col-t");if(c.k!=="候選")ct.append(el("span","col-code",c.k));ct.append(c.n);hd.append(ct);
     const cn=el("span","col-n",c.min?n+" / "+c.min+"–"+c.max+" 首":n+" 首");
@@ -736,31 +761,17 @@ function renderBoard(){
     const ul=el("div","col-list");
     board[c.k].forEach(k=>{total++;const s=songOf(k);
       const p=el("div","pick");p.dataset.k=k;makeDraggable(p,k);
-      const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who)pa.append(el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選"));tx.append(el("span","pick-t",s.t),pa);
+      const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who){const by=el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選");by.style.color=colorOf(who);pa.append(by)}tx.append(el("span","pick-t",s.t),pa);
       const lg=el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
       const rm=el("button","rm","×");rm.type="button";rm.setAttribute("aria-label","從歌單移除 "+s.t);rm.onclick=()=>move(k,null);
       p.append(lg,tx,ytLink(s.t,s.a,true),kkLink(s.t,s.a,true),rm);ul.append(p)});
-    if(!board[c.k].length)ul.append(el("div","col-empty","拖曳歌曲到這裡"));
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
   });
   document.getElementById("boardCount").textContent=total+" 首";
 }
-function boardText(){
-  return COLS.filter(c=>board[c.k].length).map(c=>"【"+colLabel(c)+"】\n"+board[c.k].map((k,i)=>{const s=songOf(k);return (i+1)+". "+s.t+(s.z&&s.z!==s.t?"（"+s.z+"）":"")+(s.a?" - "+s.a:"")+(pickerOf(k)?"（由"+pickerOf(k)+"挑選）":"")}).join("\n")).join("\n\n");
-}
-document.getElementById("copyBoard").onclick=async e=>{
-  const t=boardText();const b=e.currentTarget;
-  if(!t){b.textContent="歌單還是空的";setTimeout(()=>b.textContent="複製歌單文字",1600);return}
-  try{await navigator.clipboard.writeText(t);b.textContent="已複製"}
-  catch(_){const ta=document.getElementById("copyFallback");ta.hidden=false;ta.value=t;ta.select();b.textContent="請按 ⌘C / Ctrl+C 複製"}
-  setTimeout(()=>b.textContent="複製歌單文字",2000);
-};
 
 function render(){
-  document.querySelectorAll(".step").forEach(b=>{
-    b.setAttribute("aria-pressed",String(b.dataset.k===state.scene));
-    b.querySelector(".step-c").textContent=SONGS.filter(s=>s.s.includes(b.dataset.k)&&match(s,true)).length+" 首";
-  });
+  document.querySelectorAll("#scenes .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.scene)));
   document.querySelectorAll("#langs .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.lang)));
   document.querySelectorAll("#kinds .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.kind)));
   document.getElementById("onlyPicked").setAttribute("aria-pressed",String(state.picked));
@@ -783,5 +794,6 @@ SOURCES.forEach(([n,u])=>{const li=el("li");const a=el("a",null,n);a.href=u;a.ta
 setupCustomCard();
 setupShare();
 setupNickname();
+renderPeople();
 render();
 </script>
