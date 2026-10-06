@@ -164,7 +164,6 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .yt svg{width:14px;height:14px;fill:var(--hong)}
 .kk-mark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--l-en);color:var(--card);font-size:10px;font-weight:900;line-height:1;font-family:var(--body)}
 .kk:hover{border-color:var(--l-en);color:var(--l-en)}
-.kk.yt-s:hover{background:var(--gold-soft)}
 .trap .act{margin-top:8px}.trap .yt{margin-top:0}
 .trap .yt{margin-top:8px;background:var(--card)}
 .empty{padding:40px 0;color:var(--muted);text-align:center;grid-column:1/-1}
@@ -230,16 +229,39 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .col-list{display:flex;flex-direction:column;gap:4px}
 .col.is-empty .col-list{display:none}
 .col.is-empty .col-h{margin-bottom:0}
-.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
+.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
 .pick-tx{display:flex;flex-direction:column;min-width:0;line-height:1.3}
 .pick-t{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick-a{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lang.mini{font-size:11px;line-height:16px;padding:0 4px}
-.rm{appearance:none;border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;width:28px;height:28px;padding:0;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;align-self:center}
-.rm:hover{background:var(--no-soft);color:var(--no)}
-.yt-s{align-self:center;padding:0;width:28px;height:28px;justify-content:center;border-color:transparent;border-radius:4px}
-.yt-s:hover{background:var(--hong-soft);border-color:transparent}
 .dragging{opacity:.45}
+/* like: ♡ toggles your like on a song someone else picked; likers show as small avatars */
+.like{appearance:none;border:0;background:transparent;color:var(--muted);display:inline-flex;align-items:center;gap:0;height:28px;min-width:28px;padding:0 5px;border-radius:4px;cursor:pointer;font-size:16px;line-height:1;align-self:center;justify-content:center}
+.like:hover{background:var(--hong-soft);color:var(--hong)}
+.like.on,.like.ro{color:var(--hong)}
+.like.ro{cursor:default}
+.like .heart{margin-right:3px}
+.like .avatar{width:18px;height:18px;font-size:10px;border-width:1px;border-color:var(--card);margin-left:-5px}
+.like .heart+.avatar{margin-left:0}
+.row-more{appearance:none;border:0;background:transparent;color:var(--muted);width:28px;height:28px;padding:0;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;align-self:center}
+.row-more:hover,.row-more[aria-expanded="true"]{background:var(--paper);color:var(--ink)}
+.row-more svg{width:16px;height:16px;fill:currentColor}
+.row-menu{position:fixed;inset:auto;margin:0;padding:4px;min-width:168px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(20,10,15,.18)}
+.menu-i{display:flex;align-items:center;gap:10px;width:100%;appearance:none;border:0;background:transparent;font:inherit;font-size:14px;color:var(--ink);text-decoration:none;text-align:left;padding:8px 10px;border-radius:5px;cursor:pointer}
+.menu-i:hover,.menu-i:focus-visible{background:var(--paper);outline:none}
+.menu-i svg{width:15px;height:15px;fill:var(--hong);flex:none}
+.menu-i .kk-mark{flex:none}
+.menu-i.danger{color:var(--no);border-top:1px solid var(--line);border-radius:0 0 5px 5px;margin-top:4px}
+.menu-i.danger:hover,.menu-i.danger:focus-visible{background:var(--no-soft)}
+.menu-x{width:15px;text-align:center;font-size:18px;line-height:1}
+.like.compact{position:relative;width:28px;padding:0}
+.like.compact .heart{margin:0}
+.like.compact .like-badge{position:absolute;right:-1px;bottom:1px;width:15px;height:15px;font-size:9px;margin:0;border:1.5px solid var(--card)}
+.like.compact .like-badge.more{background:var(--hong);color:var(--on-hong);font-variant-numeric:tabular-nums}
+.pick-mu{font-size:11px;font-weight:700;color:var(--hong)}
+.like-n{font-size:11px;color:var(--muted);margin-left:2px}
+.act .like{border:1px solid var(--line);border-radius:999px;height:auto;padding:3px 10px;font-size:14px}
+.act .like.ro{border-color:transparent;padding-inline:0}
 .custom-fields{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 10px;align-items:center}
 .custom-fields label,.custom-fields .lbl{font-size:13px;color:var(--muted);margin-top:0}
 .custom-links{display:flex;gap:8px}
@@ -409,6 +431,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
     <button type="button" data-tab="board" aria-pressed="false"><span class="tab-ico" aria-hidden="true">☰</span>歌單</button>
   </nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="row-menu" id="rowMenu" popover role="menu"></div>
 
   <footer>
     <h2>說明與資料來源</h2>
@@ -755,25 +778,36 @@ function siteName(u){let h="";try{h=new URL(u).hostname.replace(/^www\./,"")}cat
   const p=h.split(".");return p.slice(SLD.has(p.slice(-2).join("."))?-3:-2).join(".")}
 function srcChip(u){const a=el("a","src-chip",siteName(u));a.href=u;a.target="_blank";a.rel="noopener";a.title=u;a.append(el("span","src-arrow","↗"));return a}
 const ytUrl=(t,a)=>"https://www.youtube.com/results?search_query="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
-function ytLink(t,a,short){const x=el("a","yt"+(short?" yt-s":""));x.href=ytUrl(t,a);x.target="_blank";x.rel="noopener";
-  x.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';if(!short)x.append("YouTube");
+function ytLink(t,a){const x=el("a","yt");x.href=ytUrl(t,a);x.target="_blank";x.rel="noopener";
+  x.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';x.append("YouTube");
   x.setAttribute("aria-label","在 YouTube 搜尋 "+t);x.title="在 YouTube 搜尋";return x}
 const kkUrl=(t,a)=>"https://www.kkbox.com/tw/tc/search?q="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
-function kkLink(t,a,short){const x=el("a","yt kk"+(short?" yt-s":""));x.href=kkUrl(t,a);x.target="_blank";x.rel="noopener";
-  x.append(el("span","kk-mark","K"));if(!short)x.append("KKBOX");
+function kkLink(t,a){const x=el("a","yt kk");x.href=kkUrl(t,a);x.target="_blank";x.rel="noopener";
+  x.append(el("span","kk-mark","K"));x.append("KKBOX");
   x.setAttribute("aria-label","在 KKBOX 搜尋 "+t);x.title="在 KKBOX 搜尋";return x}
 
 /* ---------- board state: shared db when available, this browser otherwise ---------- */
-const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{}});
+const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{}});
 function clean(b){const out=emptyBoard(),seen=new Set();
   if(b&&typeof b==="object")Object.keys(b).forEach(ck=>{const to=COLBY[ck]?ck:OLDCOL[ck];if(!to||!Array.isArray(b[ck]))return;
     b[ck].forEach(k=>{if(songOf(k)&&!seen.has(k)){seen.add(k);out[to].push(k)}})});
   /* _by: song key → {n: nickname of who added it, t: when} */
   const src=b&&b._by;
   if(src&&typeof src==="object")Object.keys(src).forEach(k=>{const v=src[k];if(seen.has(k)&&v&&typeof v.n==="string"&&v.n)out._by[k]={n:v.n.slice(0,20),t:+v.t||0}});
+  /* _like: song key → {nickname: when}; a negative time means the like was withdrawn then, so merging two saves can't bring it back */
+  const lk=b&&b._like;
+  if(lk&&typeof lk==="object")Object.keys(lk).forEach(k=>{const v=lk[k];if(!seen.has(k)||!v||typeof v!=="object")return;
+    const m={};Object.keys(v).forEach(n=>{const t=+v[n];if(n&&n.length<=20&&t&&n!==out._by[k]?.n)m[n]=t});if(Object.keys(m).length)out._like[k]=m});
   return out}
 let nickname="";try{nickname=localStorage.getItem("wedding-nickname")||""}catch(e){}
 const pickerOf=k=>board._by&&board._by[k]?board._by[k].n:"";
+/* who likes a song: anyone but its picker, with a live (positive) like */
+const likersOf=k=>{const m=board._like[k]||{};return Object.keys(m).filter(n=>m[n]>0&&n!==pickerOf(k))};
+/* keep the newer like or withdrawal per person from a board saved elsewhere, for songs still on this board */
+function mergeLikes(b,remote){const r=remote&&remote._like;if(!r||typeof r!=="object")return;
+  Object.keys(r).forEach(k=>{if(!COLS.some(c=>b[c.k].includes(k))||!r[k]||typeof r[k]!=="object")return;
+    const m=b._like[k]||{};Object.keys(r[k]).forEach(n=>{const t=+r[k][n];if(t&&Math.abs(t)>Math.abs(m[n]||0))m[n]=t});
+    if(Object.keys(m).length)b._like[k]=m})}
 let board=emptyBoard();
 try{
   const saved=localStorage.getItem("wedding-board");
@@ -832,9 +866,29 @@ function move(k,col,before){
   COLS.forEach(c=>{board[c.k]=board[c.k].filter(x=>x!==k)});
   if(col){const arr=board[col];const i=before?arr.indexOf(before):-1;i>=0?arr.splice(i,0,k):arr.push(k)}
   if(col&&!was&&nickname)board._by[k]={n:nickname,t:Date.now()};
-  if(!col)delete board._by[k];
+  if(!col){delete board._by[k];delete board._like[k]}
   persist();render();
 }
+function toggleLike(k){
+  if(!nickname||nickname===pickerOf(k)||!where(k))return;
+  const m=board._like[k]||(board._like[k]={}),on=m[nickname]>0;
+  m[nickname]=on?-Date.now():Date.now();
+  toast(on?"已收回讚":"已按讚");
+  persist();render();
+}
+/* ♥ on a song someone else picked; the picker only sees who liked it */
+const canLike=k=>!!(boardId&&nickname&&where(k)&&nickname!==pickerOf(k));
+/* compact (playlist rows): the heart keeps icon width, with one small badge on its corner — the liker's avatar, or how many like it */
+function likeBtn(k,title,compact){
+  const likers=likersOf(k),mine=likers.includes(nickname);
+  const who=b=>{if(compact){if(likers.length===1)b.append(avatar(likers[0],"like-badge"));else if(likers.length>1)b.append(el("span","avatar like-badge more",String(likers.length)))}
+    else{likers.slice(0,2).forEach(n=>b.append(avatar(n)));if(likers.length>2)b.append(el("span","like-n","+"+(likers.length-2)))}};
+  if(!canLike(k)){if(!likers.length)return el("span");
+    const s=el("span","like ro"+(compact?" compact":""));s.title=likers.join("、")+" 喜歡";s.append(el("span","heart","♥"));who(s);return s}
+  const b=el("button","like"+(mine?" on":"")+(compact?" compact":""));b.type="button";b.setAttribute("aria-pressed",String(mine));
+  b.setAttribute("aria-label",(mine?"收回對 ":"喜歡 ")+title+" 的讚");b.title=likers.length?likers.join("、")+" 喜歡":"喜歡這首";
+  b.append(el("span","heart",mine?"♥":"♡"));who(b);
+  b.onclick=e=>{e.stopPropagation();toggleLike(k);b.replaceWith(likeBtn(k,title,compact))};return b}
 setSync("local");
 /* share: the board id is already in the URL, so sharing is sending this address */
 let openNickname=()=>{};
@@ -898,6 +952,9 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
   const chan=sb.channel("song:board:"+boardId,{config:{broadcast:{self:false}}});
   okMode="link";
   remoteSave=async b=>{
+    /* the whole board is overwritten, so first fold in likes saved by others meanwhile */
+    const cur=await sb.from("boards").select("cols").eq("id",boardId).maybeSingle();
+    if(cur.data){const before=JSON.stringify(b._like);mergeLikes(b,cur.data.cols);if(JSON.stringify(b._like)!==before){saveLocal();render()}}
     const {error}=await sb.from("boards").upsert({id:boardId,cols:b,updated_at:new Date().toISOString()});
     if(error)throw error;
     chan.send({type:"broadcast",event:"updated",payload:{}}).catch(()=>{});
@@ -1002,7 +1059,8 @@ function openAi(s,k){
   const act=el("div","act");act.append(kkLink(x.title||s.t,x.artist||s.a||""),ytLink(x.title||s.t,x.artist||s.a||""));
   if(k){const sel=placeSelect(k,"把 "+(x.title||s.t)+" 移到其他階段");
     sel.addEventListener("change",()=>{if(where(k))openAi(s,k);else document.getElementById("aiDlg").close()});act.append(el("span","act-break"),sel);
-    const who=where(k)&&pickerOf(k);if(who){const by=el("span","in-by","由"+who+"挑選");by.style.color=colorOf(who);act.append(by)}}
+    const who=where(k)&&pickerOf(k);if(who){const by=el("span","in-by","由"+who+"挑選");by.style.color=colorOf(who);act.append(by)}
+    if(where(k))act.append(likeBtn(k,x.title||s.t))}
   c.append(act);
   if(k&&x.is_landmine&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
     xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};
@@ -1124,9 +1182,36 @@ function card(s){
   const act=el("div","act");act.append(kkLink(s.t,s.a),ytLink(s.t,s.a),el("span","act-break"),placeSelect(k,"把 "+s.t+" 加入歌單"));
   /* the select already shows the stage, so only say who picked it */
   const who=cur&&pickerOf(k);if(who){const by=el("span","in-by","由"+who+"挑選");by.style.color=colorOf(who);act.append(by)}
+  if(cur)act.append(likeBtn(k,s.t));
   c.append(act);
   return c;
 }
+/* playlist row ⋮: listen on KKBOX / YouTube or remove, in one shared popover placed under the button */
+let menuBtn=null,menuClosedAt=0;
+function openRowMenu(btn,k,s){
+  const m=document.getElementById("rowMenu");
+  if(menuBtn===btn&&Date.now()-menuClosedAt<300)return;  // the press on ⋮ already light-dismissed it: treat as a toggle
+  m.replaceChildren();
+  const kk=kkLink(s.t,s.a),yt=ytLink(s.t,s.a);
+  [kk,yt].forEach(a=>{a.className="menu-i";a.setAttribute("role","menuitem");a.removeAttribute("title");a.onclick=()=>m.hidePopover()});
+  const rm=el("button","menu-i danger");rm.type="button";rm.setAttribute("role","menuitem");rm.append(el("span","menu-x","×"),"從歌單移除");
+  rm.onclick=()=>{m.hidePopover();move(k,null)};
+  m.append(kk,yt,rm);m.showPopover();menuBtn=btn;btn.setAttribute("aria-expanded","true");
+  const r=btn.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+  let top=r.bottom+4;if(top+h>innerHeight-8)top=r.top-h-4;
+  m.style.left=Math.max(8,Math.min(r.right-w,innerWidth-w-8))+"px";m.style.top=Math.max(8,top)+"px";
+  kk.focus();
+}
+function setupRowMenu(){
+  const m=document.getElementById("rowMenu");if(!m||!m.showPopover)return;
+  m.addEventListener("beforetoggle",e=>{if(e.newState==="closed"){menuClosedAt=Date.now();if(menuBtn)menuBtn.setAttribute("aria-expanded","false")}});
+  /* it is placed once, so close it when anything scrolls underneath */
+  const hide=()=>{if(m.matches(":popover-open"))m.hidePopover()};
+  addEventListener("scroll",hide,{capture:true,passive:true});addEventListener("resize",hide);
+  m.addEventListener("keydown",e=>{const it=[...m.querySelectorAll(".menu-i")],i=it.indexOf(document.activeElement);
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();it[(i+(e.key==="ArrowDown"?1:it.length-1))%it.length].focus()}});
+}
+setupRowMenu();
 let xOpen=false;try{xOpen=!!localStorage.getItem("wedding-x-open")}catch(_){}
 function renderBoard(){
   const wrap=document.getElementById("cols");wrap.replaceChildren();
@@ -1151,14 +1236,16 @@ function renderBoard(){
       const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who){const by=el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選");by.style.color=colorOf(who);pa.append(by)}const row=el("div","pick-row");row.append(el("span","pick-t",s.t));tx.append(row,pa);
       const aiOn=s0.custom&&boardId&&window.supabase;
       if(aiOn)row.append(aiBadge(s0));
+      if(c.k==="候選"&&likersOf(k).length){const mu=el("span","pick-mu","♥ 兩人都喜歡");mu.title=pickerOf(k)+" 挑的，"+likersOf(k).join("、")+" 也喜歡";tx.append(mu)}
       if(aiOn||!s0.custom){tx.classList.add("ai-open");tx.tabIndex=0;tx.setAttribute("role","button");
         tx.title=s0.custom?"查看 AI 檢測結果":"查看歌曲卡片";const open=()=>openSong(s0,k);
         tx.onclick=open;tx.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}}}
       const lang=ai&&ai.language&&ai.language!=="其他"?ai.language:null;
       const lg=lang?el("span","lang mini "+(LC[lang]||""),lang[0]):el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
       if(s0.custom)lg.title=lang?lang+"（自訂歌曲）":"自訂歌曲";
-      const rm=el("button","rm","×");rm.type="button";rm.setAttribute("aria-label","從歌單移除 "+s.t);rm.onclick=()=>move(k,null);
-      p.append(lg,tx,kkLink(s.t,s.a,true),ytLink(s.t,s.a,true),rm);ul.append(p)});
+      const mb=el("button","row-more");mb.type="button";mb.setAttribute("aria-label",s.t+" 的更多動作");mb.setAttribute("aria-haspopup","menu");mb.setAttribute("aria-expanded","false");
+      mb.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="3.5" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.5" r="1.5"/></svg>';mb.onclick=()=>openRowMenu(mb,k,s);
+      p.append(lg,tx,likeBtn(k,s.t,true),mb);ul.append(p)});
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
   });
   document.getElementById("boardCount").textContent=total+" 首";
