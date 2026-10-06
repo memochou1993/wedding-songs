@@ -43,9 +43,12 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .avatar{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:700;color:var(--on-hong);border:2px solid var(--paper);margin-left:-8px;flex:none;user-select:none}
 .people>.avatar:first-child,.people>.me:first-child .avatar{margin-left:0}
 .avatar.more{background:var(--line);color:var(--ink);font-size:12px}
+/* green dot = online now */
+#people .avatar{position:relative}
+#people .avatar:not(.more)::after{content:"";position:absolute;right:-4px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:#3bb273;border:2px solid var(--paper)}
 .me{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;border-radius:50%;margin-left:10px}
-.me .avatar.self{margin-left:0;box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--ink)}
-.me:hover .avatar.self{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--hong)}
+.me .avatar.self{margin-left:0}
+.me:hover .avatar.self{border-color:var(--hong)}
 .nick-dlg{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:24px;width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain}
 .nick-dlg::backdrop{background:rgba(20,10,15,.55)}
 .nick-dlg form{display:flex;flex-direction:column;gap:10px}
@@ -246,9 +249,12 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .grip{color:var(--muted);font-size:18px;line-height:1;padding-top:2px}
 .act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:auto}
 .act .yt{align-self:auto}
+/* links on the first line, the add-to-playlist select always starts the second */
+.act-break{flex-basis:100%;height:0}
 .place{appearance:none;-webkit-appearance:none;font:inherit;font-size:13px;color:var(--ink);background:var(--card) var(--chev) no-repeat right 12px center/12px 12px;border:1px solid var(--line);border-radius:999px;padding:4px 32px 4px 12px;max-width:100%;cursor:pointer}
 .place:hover{border-color:var(--ink)}
 .in{font-size:12px;color:var(--gold);font-weight:700}
+.in-by{font-size:12px;font-weight:700}
 @media (max-width:1000px){
   .layout{grid-template-columns:1fr}
   .board{position:static;max-height:none;order:-1}
@@ -919,7 +925,7 @@ function openAi(s,k){
   body.replaceChildren();links.replaceChildren();
   document.querySelectorAll("#aiDlg .move-x").forEach(e=>e.remove());
   if(!x){const h=el("h2",null,s.t);h.id="aiTitle";body.append(h,el("p","why",!r||r.status==="running"||r.status==="pending"?"AI 正在檢測這首歌，大約需要半分鐘，好了會自動更新。":r.status==="limited"?"這份歌單今天的 AI 查詢次數已達上限，明天再試。":r.status==="failed"?"AI 查詢失敗。":"AI 查不到這首歌，可能是歌名或歌手有誤。"));
-    links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));document.getElementById("aiDlg").showModal();return}
+    links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));{const d=document.getElementById("aiDlg");if(!d.open)d.showModal()}return}
   const low=lowConf(x);
   const c=card({t:x.title||s.t,z:x.title_zh||"",a:x.artist||s.a||"",y:parseInt(x.release_year,10)||null,l:x.language||"其他",
     s:aiScenes(x),p:TEMPO[x.tempo]||"中",m:x.description||"",w:x.reason||"",
@@ -949,11 +955,15 @@ function openAi(s,k){
       const chip=srcChip(u);if(dup)chip.firstChild.textContent=n+" "+seen[n];list.append(chip)});fact("來源",list)}
   if(facts.children.length)c.append(facts);
   body.append(c);
-  links.append(kkLink(x.title||s.t,x.artist||s.a||""),ytLink(x.title||s.t,x.artist||s.a||""));
+  const act=el("div","act");act.append(kkLink(x.title||s.t,x.artist||s.a||""),ytLink(x.title||s.t,x.artist||s.a||""));
+  if(k){const sel=placeSelect(k,"把 "+(x.title||s.t)+" 移到其他階段");
+    sel.addEventListener("change",()=>{if(where(k))openAi(s,k);else document.getElementById("aiDlg").close()});act.append(el("span","act-break"),sel);
+    const who=where(k)&&pickerOf(k);if(who){const by=el("span","in-by","由"+who+"挑選");by.style.color=colorOf(who);act.append(by)}}
+  c.append(act);
   if(k&&x.is_landmine&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
     xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};
     document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
-  document.getElementById("aiDlg").showModal();
+  const dlg=document.getElementById("aiDlg");if(!dlg.open)dlg.showModal();
 }
 /* songs from the list open their own card in the same dialog the AI results use */
 function openSong(s,k){
@@ -966,13 +976,14 @@ function openSong(s,k){
     c=el("article","song");const h=el("h3",null,s.t);c.append(h,el("div","artist",s.a));
     const m=el("div","meta");m.append(langChip(s.l));(s.g||[]).forEach(x=>m.append(el("span","flag",x)));c.append(m,el("p","sum",s.r));
   }else{
-    c=card(s);c.classList.remove("placed");c.draggable=false;c.querySelectorAll(".act,.grip").forEach(e=>e.remove());
+    c=card(s);c.classList.remove("placed");c.draggable=false;c.querySelectorAll(".grip").forEach(e=>e.remove());
+    const sel=c.querySelector("select.place");if(sel)sel.addEventListener("change",()=>openSong(s,k));
   }
   c.querySelector("h3").id="aiTitle";body.append(c);
-  links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));
+  if(s.trap)links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));
   if(s.trap&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
     xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
-  document.getElementById("aiDlg").showModal();
+  const dlg=document.getElementById("aiDlg");if(!dlg.open)dlg.showModal();
 }
 
 /* ---------- custom song dialog ---------- */
@@ -1065,9 +1076,9 @@ function card(s){
   c.append(el("p","sum",s.m),why);
   if(s.c)c.append(el("p","caution","提醒："+s.c));
   if(s.src){const row=el("div","src-row");row.append(el("span","src-lbl","來源"),srcChip(s.src));c.append(row)}
-  const act=el("div","act");act.append(kkLink(s.t,s.a),ytLink(s.t,s.a),placeSelect(k,"把 "+s.t+" 加入歌單"));
-  if(cur){const inn=el("span","in"+(cur==="X"?" out":""),cur==="X"?"已排除":"已在「"+(cur==="候選"?"候選":cur+" "+COLBY[cur].n)+"」");const who=pickerOf(k);
-    if(who){const by=el("span","in-by"," · 由"+who+"挑選");by.style.color=colorOf(who);inn.append(by)}act.append(inn)}
+  const act=el("div","act");act.append(kkLink(s.t,s.a),ytLink(s.t,s.a),el("span","act-break"),placeSelect(k,"把 "+s.t+" 加入歌單"));
+  /* the select already shows the stage, so only say who picked it */
+  const who=cur&&pickerOf(k);if(who){const by=el("span","in-by","由"+who+"挑選");by.style.color=colorOf(who);act.append(by)}
   c.append(act);
   return c;
 }
@@ -1140,6 +1151,17 @@ document.querySelectorAll(".chips").forEach(row=>{
   row.addEventListener("wheel",e=>{const max=row.scrollWidth-row.clientWidth,d=e.deltaY;
     if(max>0&&Math.abs(d)>Math.abs(e.deltaX)&&((d>0&&row.scrollLeft<max-1)||(d<0&&row.scrollLeft>1))){row.scrollLeft+=d;e.preventDefault()}},{passive:false});
   new ResizeObserver(upd).observe(row);upd();
+});
+/* clicking the dimmed backdrop closes a dialog (only when the press also started outside, so text selection that ends outside doesn't) */
+document.querySelectorAll("dialog").forEach(d=>{
+  let downOutside=false;
+  const outside=e=>{const r=d.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom};
+  d.addEventListener("pointerdown",e=>{downOutside=e.target===d&&outside(e)});
+  d.addEventListener("click",e=>{
+    if(!downOutside||e.target!==d||!outside(e))return;
+    if(d.id==="nickDlg"&&!nickname)return;  // a nickname is required before using the board
+    d.close();
+  });
 });
 setupCustomDialog();
 setupShare();
