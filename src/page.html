@@ -742,7 +742,7 @@ const COLS=[
 ];
 const STAGES=COLS.filter(c=>c.k!=="候選"&&c.k!=="X");
 const stageName=k=>k+" "+COLBY[k].n.replace(/（[^）]*）/g,"");
-const colLabel=c=>c.k==="候選"||c.k==="X"?c.n:c.k+" "+c.n+(c.min?"（"+c.min+"–"+c.max+" 首）":"");
+const colLabel=c=>c.k==="候選"||c.k==="X"?c.n:c.k+" "+c.n;
 const COLBY=Object.fromEntries(COLS.map(c=>[c.k,c]));
 /* placements saved under the earlier scene names */
 const OLDCOL={"迎賓":"A","用餐敬酒":"B","送客":"C","二進":"10","成長影片":"00","一進":"候選","感謝父母":"候選"};
