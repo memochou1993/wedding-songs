@@ -1217,7 +1217,7 @@ function renderBoard(){
       ct.onclick=()=>{xOpen=!xOpen;try{localStorage.setItem("wedding-x-open",xOpen?"1":"")}catch(_){}renderBoard()};ct.append(el("span","x-caret",xOpen?"▾":"▸"))}
     else if(c.k!=="候選")ct.append(el("span","col-code",c.k));
     ct.append(c.n);hd.append(ct);
-    const cn=el("span","col-n",c.min?n+" / "+c.min+"–"+c.max+" 首":n+" 首");
+    const cn=el("span","col-n",c.max?n+" / "+c.max+" 首":n+" 首");
     if(c.min)cn.dataset.ok=n<c.min?"low":n>c.max?"high":"ok";hd.append(cn);
     if(c.k!=="候選"&&!isX){const tb=el("button","col-tag","看推薦");tb.type="button";
       tb.onclick=()=>{state.scene=c.k;setTab("pick");render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb)}
