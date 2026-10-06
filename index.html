@@ -44,7 +44,7 @@ button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--hong);outline-offset:2px}
 
 header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"xi text share";gap:20px;align-items:center;padding-bottom:28px;border-bottom:1px solid var(--line)}
-.xi{grid-area:xi}.head-text{grid-area:text;min-width:0}
+.xi{grid-area:xi;align-self:start;margin-top:6px}.head-text{grid-area:text;min-width:0}
 .head-share{grid-area:share;align-self:start;display:flex;align-items:center;gap:12px}
 .share-btn{appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--on-hong);background:var(--hong);border:1px solid var(--hong);border-radius:999px;padding:8px 18px;cursor:pointer;white-space:nowrap}
 .share-btn:hover{opacity:.9}
@@ -97,7 +97,12 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .chip:hover{border-color:var(--ink)}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .search{flex:none;width:100%;margin-bottom:4px;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;color:var(--ink)}
-.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin:14px 0 10px}
+.count-row{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin:14px 0 10px}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--card)}
+.seg button{appearance:none;border:0;background:transparent;font:inherit;font-size:13px;color:var(--muted);padding:4px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 
 /* cards */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
@@ -119,6 +124,8 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .tempo i.on{background:var(--muted)}
 .sum{margin:0}
 .why{margin:0;font-size:13px;color:var(--muted)}
+.src-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.src-link:hover{color:var(--hong)}
 .caution{margin:0;font-size:13px;background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:6px 10px}
 .yt{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 12px 3px 10px}
 .yt:hover{border-color:var(--hong);color:var(--hong)}
@@ -298,10 +305,17 @@ body.is-dragging .col.over{border-color:var(--hong)}
           </div>
           <div class="group" id="scenes"><span class="group-l">階段</span><div class="chips"></div></div>
           <div class="group" id="langs"><span class="group-l">語言</span><div class="chips"></div></div>
-          <div class="group" id="kinds"><span class="group-l">時期</span><div class="chips"></div><button class="chip only" id="onlyPicked" type="button" aria-pressed="false">只看已加入歌單</button></div>
+          <div class="group" id="eras"><span class="group-l">年代</span><div class="chips"></div></div>
         </div>
       </section>
-      <div class="count" id="count"></div>
+      <div class="count-row">
+        <div class="count" id="count"></div>
+        <div class="seg" id="viewSeg" role="group" aria-label="顯示範圍">
+          <button type="button" data-v="all" aria-pressed="true">全部</button>
+          <button type="button" data-v="in" aria-pressed="false">已加入 <span id="segIn">0</span></button>
+          <button type="button" data-v="out" aria-pressed="false">未加入</button>
+        </div>
+      </div>
       <div class="grid" id="grid"></div>
     </div>
     <aside class="board" aria-label="我的婚禮歌單">
@@ -362,27 +376,77 @@ const SONGS=[
 {t:"Isn't She Lovely",a:"Stevie Wonder",y:1976,l:"英文",s:["00"],p:"中",st:"經典",m:"Stevie Wonder 為剛出生的女兒寫的歌，表達迎接新生命的喜悅和感恩。",w:"很適合配新娘從小到大的成長照片。"},
 {t:"Count on Me",a:"Bruno Mars",y:2010,l:"英文",s:["00","C"],p:"中",st:"經典",m:"告訴好朋友，不管遇到什麼困難，自己都會在身邊。",w:"講的是友情和陪伴，適合放在有親友同學的成長影片段落。"},
 {t:"Photograph",a:"Ed Sheeran",y:2014,l:"英文",s:["00"],p:"慢",st:"經典",m:"講把一起留下的回憶收在照片裡，就算暫時分開，照片也能讓人想起被愛的感覺，並等著對方回來。",w:"以照片和回憶為主題，跟成長影片、愛情故事影片很搭。",c:"歌曲背景是兩人暫時分隔兩地，不是分手。"},
+{t:"At Last",a:"Etta James",y:1960,l:"英文",s:["03","05","07"],p:"慢",st:"經典",m:"歌者說等了很久，真愛終於來到身邊，孤單的日子已經結束。如今的每一天都像晴空一樣美好。",w:"多份「史上最佳婚禮歌曲」與切蛋糕歌單都列出這首爵士經典。",src:"https://www.musicindustryhowto.com/wedding-songs/"},
+{t:"My Girl",a:"The Temptations",y:1964,l:"英文",s:["02","08","B"],p:"中",st:"經典",m:"歌者說有了心愛的女孩，陰天也像晴天一樣溫暖。只要有她在，別的都不需要。",w:"婚禮歌單把它列為經典，適合進退場與開啟輕鬆的宴客氣氛。",src:"https://easyweddings.com.au/wp-json/wp/v2/au-article/51556"},
+{t:"Can't Take My Eyes Off You",a:"Frankie Valli",y:1967,l:"英文",s:["06","08","10"],p:"中",st:"經典",m:"歌者說對方好得讓人不敢相信，讓他一直目不轉睛。副歌熱情表白，懇請對方讓他好好愛她。",w:"常見於切蛋糕與第一支舞歌單，副歌適合讓全場跟唱。",src:"https://www.fixthemusic.com/blog/wedding-cake-cutting-songs"},
+{t:"This Will Be (An Everlasting Love)",a:"Natalie Cole",y:1975,l:"英文",s:["06","08","10"],p:"快",st:"經典",m:"歌者開心宣告兩人的愛會永遠持續，每一天都想緊緊抱住對方。",w:"切蛋糕歌單把它列為熱門的愛情歌曲，曲風明亮又喜氣。",src:"https://www.fixthemusic.com/blog/wedding-cake-cutting-songs"},
+{t:"Lovely Day",a:"Bill Withers",y:1977,l:"英文",s:["04","08","A"],p:"中",st:"經典",m:"歌者說就算醒來時一切不順，只要看到對方，一天就會變得美好。",w:"婚禮歌單推薦它用在進場、退場或宴會開場。",src:"https://www.myweddingsongs.com/weddingblog/bill-withers-songs"},
+{t:"Celebration",a:"Kool & the Gang",y:1980,l:"英文",s:["04","06","11","12"],p:"快",st:"經典",m:"這首歌邀請大家一起來慶祝、一起享受美好時光。整首歌充滿派對與歡聚的氣氛。",w:"婚禮進場歌單稱它是最直接的選擇，因為歌名就說明了「我們在慶祝」。",src:"https://www.theknot.com/content/celebration-songs"},
+{t:"Endless Love",a:"Lionel Richie & Diana Ross",y:1981,l:"英文",s:["01","05","07"],p:"慢",st:"經典",m:"男女對唱，說對方是自己生命中的唯一，兩人要一起守護一份沒有盡頭的愛。",w:"八〇年代婚禮歌單把它列為代表性的抒情對唱，長輩也熟悉。",src:"https://www.myweddingsongs.com/weddingblog/80s-love-songs-top-17/"},
+{t:"Walking on Sunshine",a:"Katrina and the Waves",y:1985,l:"英文",s:["09","10","11"],p:"快",st:"經典",m:"歌者因為確定被對方愛著而開心得像走在陽光裡，迫不及待要跟大家分享好心情。",w:"多份捧花拋擲歌單都列入這首歌，節奏輕快，一下就能炒熱氣氛。",src:"https://www.weddingwire.ca/wedding-ideas/the-top-25-bouquet-toss-songs--c255"},
+{t:"Glory of Love",a:"Peter Cetera",y:1986,l:"英文",s:["02","05","07"],p:"慢",st:"經典",m:"男方承諾會一直守護對方，願意為了這份愛挺身而出，兩人一起實現共同的夢想。",w:"八〇年代婚禮慢歌清單收錄這首歌，歌詞帶有守護的承諾。",src:"https://www.myweddingsongs.com/weddingblog/80s-love-songs-top-17/"},
+{t:"I Swear",a:"All-4-One",y:1994,l:"英文",s:["02","05","07"],p:"慢",st:"經典",m:"歌者發誓不論順境逆境都會陪在對方身邊，年紀漸長也會一樣愛她，像是一段誓詞。",w:"被稱為九〇年代經典，很多新人在交換誓言時選用。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/"},
+{t:"Truly Madly Deeply",a:"Savage Garden",y:1997,l:"英文",s:["03","05","07"],p:"慢",st:"經典",m:"歌者想成為對方的依靠，用全心全意的愛陪她一起實現願望。",w:"九〇年代婚禮情歌清單常列入這首歌。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/"},
+{t:"From This Moment On",a:"Shania Twain",y:1998,l:"英文",s:["03","04","05"],p:"慢",st:"經典",m:"從這一刻起，兩人要牽著手一起走下去，願意為對方付出一切，生命從此有了完整的意義。",w:"婚禮歌單形容它是承諾永恆之愛的對唱，常用於典禮與切蛋糕。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/"},
+{t:"Amazed",a:"Lonestar",y:1999,l:"英文",s:["03","05","07"],p:"慢",st:"經典",m:"歌者對另一半的每一個小細節都感到驚喜，越相處越深愛，想一輩子這樣愛下去。",w:"它曾是登上排行冠軍的鄉村歌曲，被列為頂尖的第一支舞歌曲。",c:"有少數描寫親密感官的字句，但很含蓄。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/"},
+{t:"Bless the Broken Road",a:"Rascal Flatts",y:2004,l:"英文",s:["01","03","05"],p:"慢",st:"經典",m:"歌者感謝過去走過的曲折路，因為每一步都帶他走向現在的伴侶，覺得這段相遇是上天的安排。",w:"二〇〇〇年代婚禮歌單稱它是新娘進場與典禮的熱門選擇。",c:"歌詞提到過去曾經心碎，但重點在感恩遇見彼此。",src:"https://www.myweddingsongs.com/weddingblog/best-love-songs-of-the-2000s-top-20/"},
+{t:"Better Together",a:"Jack Johnson",y:2005,l:"英文",s:["07","A","B"],p:"中",st:"經典",m:"歌者說生活中的大小事，兩個人一起經歷才最好。他想把共同的回憶慢慢說成故事。",w:"從 Spotify 婚禮歌單統計出的熱門婚禮歌曲排行收錄了這首歌。",c:"和 Luke Combs 2020 年的同名歌曲不同，選歌時要注意版本。",src:"https://washingtonian.com/2022/08/18/heres-an-unofficial-list-of-the-99-most-popular-wedding-songs-right-now"},
+{t:"You and Me",a:"Lifehouse",y:2005,l:"英文",s:["03","05","07"],p:"慢",st:"經典",m:"在忙亂的世界裡，歌者眼中只有對方。兩個人在一起時，好像時間都停了下來。",w:"主唱為妻子寫了這首歌，後來成為最受歡迎的第一支舞歌曲之一，還推出了婚禮版。",src:"https://en.wikipedia.org/wiki/You_and_Me_(Lifehouse_song)"},
+{t:"Then",a:"Brad Paisley",y:2009,l:"英文",s:["00","05","07"],p:"慢",st:"經典",m:"歌者回顧兩人從相識、相戀到求婚，每次以為已經愛到極點，後來都愛得更深。",w:"被稱為近二十年最受歡迎的鄉村婚禮歌之一，歌詞按時間回顧兩人走過的路，很適合配成長影片。",src:"https://www.myweddingsongs.com/weddingblog/brad-paisley-love-songs-for-weddings/"},
+{t:"Love On Top",a:"Beyoncé",y:2011,l:"英文",s:["06","08","10","11"],p:"快",st:"經典",m:"歌者開心地說，不管發生什麼事，對方總是把愛放在第一位。後段不斷升 key，越唱越熱烈。",w:"Spotify 婚禮歌單統計的熱門婚禮歌曲收錄了這首歌。",src:"https://washingtonian.com/2022/08/18/heres-an-unofficial-list-of-the-99-most-popular-wedding-songs-right-now"},
+{t:"I Choose You",a:"Sara Bareilles",y:2014,l:"英文",s:["03","04","05"],p:"中",st:"經典",m:"歌者對伴侶宣告要用一生去選擇對方，願意承諾共同的未來，內容像是一篇結婚誓詞。",w:"婚禮網站推薦它當進場曲，它也被認為適合第一支舞。",src:"https://loveincmag.com/10-beautiful-gender-neutral-songs-for-your-processional"},
+{t:"Can't Stop the Feeling!",a:"Justin Timberlake",y:2016,l:"英文",s:["04","10","11","12"],p:"快",st:"近年流行",m:"歌者說心裡的快樂停不下來，邀請大家一起跳舞，享受當下的好心情。",w:"婚禮進場歌單推薦它，說從花童到阿嬤都會喜歡。",src:"https://greenweddingshoes.com/best-wedding-party-entrance-songs/"},
+{t:"Speechless",a:"Dan + Shay",y:2018,l:"英文",s:["03","05","07"],p:"慢",st:"近年流行",m:"新郎看到新娘的那一刻感動得說不出話，形容她美得讓人屏息。",w:"兩位成員以自己婚禮當天的感受寫成，MV 用的也是兩人的婚禮影像。",src:"https://wiov.com/2018/05/18/dan-shay-release-wedding-song-of-the-summer-speechless-watch-new-video"},
+{t:"Nobody But You",a:"Blake Shelton & Gwen Stefani",y:2020,l:"英文",s:["04","05","07"],p:"慢",st:"近年流行",m:"男女對唱，說彼此是此生唯一想要的人，不想和別人共度人生。",w:"2020 年新婚禮歌推薦清單收錄這首歌，演唱的兩人後來也結婚了。",src:"https://www.myweddingsongs.com/weddingblog/2020-wedding-songs/"},
+{t:"Better Together",a:"Luke Combs",y:2020,l:"英文",s:["01","07","B"],p:"慢",st:"近年流行",m:"歌者列舉生活中天生一對的事物，用來比喻自己和伴侶也是彼此最好的搭配。",w:"2020 年新婚禮歌推薦清單收錄這首歌，曲風溫和，長輩也容易接受。",c:"和 Jack Johnson 的同名歌曲不同，選歌時要注意版本。",src:"https://www.myweddingsongs.com/weddingblog/2020-wedding-songs/"},
+{t:"Golden Hour",a:"JVKE",y:2022,l:"英文",s:["00","03","07"],p:"中",st:"近年流行",m:"歌者把對方比作黃昏時金色的陽光，讚嘆她的美讓自己看得出神。",w:"被稱為 2022 到 2023 年最具代表性的新婚禮歌，常用於典禮與第一支舞。",src:"https://thedjsg.com/2025/01/top-11-wedding-songs-of-2024/"},
+{t:"Wildflowers and Wild Horses",a:"Lainey Wilson",y:2024,l:"英文",s:["09","A"],p:"中",st:"近年流行",m:"女性自述自己既堅強又溫柔，像野花和野馬一樣自由，不受拘束，展現自信的個性。",w:"2025 年婚禮歌單推薦它用在伴娘進場或捧花拋擲。",c:"這不是情歌，比較適合放在活潑的環節。",src:"https://www.myweddingsongs.com/weddingblog/wedding-songs-2025/"},
+{t:"The Vow",a:"Ed Sheeran",y:2025,l:"英文",s:["03","05","07"],p:"慢",st:"近年流行",m:"歌者向伴侶許下誓言，承諾會一直愛她，不放開她的手。",w:"收錄在 2025 年專輯《Play》，被認為延續了〈Perfect〉的風格，是新的第一支舞熱門歌。",c:"這是新歌，長輩可能不熟悉。",src:"https://www.myweddingsongs.com/weddingblog/wedding-songs-2025/"},
 
 /* ---------- 台語 ---------- */
-{t:"炮仔聲",a:"江蕙",l:"台語",s:["00","03"],p:"慢",st:"經典",m:"從新娘的角度寫，在喜炮聲中準備出嫁。她想起爸爸那雙粗手把自己拉拔長大，牽著她走上紅毯，捨不得離開，眼淚塞在喉嚨說不出謝謝。最後叮嚀爸媽保重身體，自己和另一半會「兩人四腳」一起打拚、白頭到老。",w:"專為婚禮寫的台語經典，幾乎每份台語婚禮歌單都會列進感謝父母段落。",c:"非常催淚，而且是女兒視角，適合新娘拜別或感謝父母影片。"},
+{t:"炮仔聲",a:"江蕙",y:2005,l:"台語",s:["00","03"],p:"慢",st:"經典",m:"從新娘的角度寫，在喜炮聲中準備出嫁。她想起爸爸那雙粗手把自己拉拔長大，牽著她走上紅毯，捨不得離開，眼淚塞在喉嚨說不出謝謝。最後叮嚀爸媽保重身體，自己和另一半會「兩人四腳」一起打拚、白頭到老。",w:"專為婚禮寫的台語經典，幾乎每份台語婚禮歌單都會列進感謝父母段落。",c:"非常催淚，而且是女兒視角，適合新娘拜別或感謝父母影片。"},
 {t:"給女兒",a:"滅火器 Fire EX.",y:2023,l:"台語",s:["00","03"],p:"中",st:"近年流行",m:"從爸爸的角度寫：女兒好像一眨眼就長大穿上婚紗，雖然捨不得還是得放手。他開玩笑叫女婿「猴囡仔」，叮嚀兩人要互相體諒、輪流洗碗、一起打拚，最後說最愛女兒的人永遠是爸爸。",w:"近年最受歡迎的「爸爸視角」台語婚禮歌，婚禮紀錄部落格和 Threads 上的新人歌單都常推薦。",c:"歌曲開頭和中段有小女孩的對話錄音。唱片公司有開放婚禮使用授權，使用前可先向唱片公司申請。"},
-{t:"手紙",a:"吳申梅",l:"台語",s:["00"],p:"慢",st:"經典",m:"子女很小就離家打拚，想起爸媽每天問「吃飽沒、會不會冷」的關心。平常說不出口的感謝，就寫成一封信，請爸媽仔細看，並祝他們保重身體、每天快樂。",w:"WeddingDay 等婚禮網站列為感謝父母的溫馨台語歌。",c:"結尾有「下輩子再當你們的寶貝」這類來世的意象，比較感傷。介意的話可以只剪前段使用。"},
+{t:"手紙",a:"吳申梅",y:2012,l:"台語",s:["00"],p:"慢",st:"經典",m:"子女很小就離家打拚，想起爸媽每天問「吃飽沒、會不會冷」的關心。平常說不出口的感謝，就寫成一封信，請爸媽仔細看，並祝他們保重身體、每天快樂。",w:"WeddingDay 等婚禮網站列為感謝父母的溫馨台語歌。",c:"結尾有「下輩子再當你們的寶貝」這類來世的意象，比較感傷。介意的話可以只剪前段使用。"},
 {t:"七老八十",a:"江蕙",y:2015,l:"台語",s:["01","04","B"],p:"中",st:"經典",m:"有你陪伴就安心，柴米油鹽、煮飯洗衫都甘願。等兩人慢慢老了、耳朵變重、頭髮變白，還是要愛你愛到七老八十，感情像燒酒一樣越陳越香，手要牽一輩子。",w:"歌詞完全在講白頭偕老，又是江蕙的作品，長輩接受度高，婚禮歌單常見。"},
-{t:"牽阮的手",a:"蔡幸娟（原唱）／蘇打綠（翻唱）",l:"台語",s:["04","05","A"],p:"慢",st:"經典",m:"「牽阮的手、走咱的路」，兩人牽著手在小雨中同行，就算路上有風有雨也甘願一起吃苦，盼望和對方白頭偕老。",w:"老歌由年輕歌手重新翻唱，蘇打綠版本在婚禮部落格中很受推薦，適合莊重浪漫的進場。"},
+{t:"牽阮的手",a:"蔡幸娟（原唱）／蘇打綠（翻唱）",y:2004,l:"台語",s:["04","05","A"],p:"慢",st:"經典",m:"「牽阮的手、走咱的路」，兩人牽著手在小雨中同行，就算路上有風有雨也甘願一起吃苦，盼望和對方白頭偕老。",w:"老歌由年輕歌手重新翻唱，蘇打綠版本在婚禮部落格中很受推薦，適合莊重浪漫的進場。"},
 {t:"一支小雨傘",a:"洪榮宏",y:1982,l:"台語",s:["01","07","A","B"],p:"中",st:"經典",m:"兩人一起撐一支小雨傘，雨越大「我來照顧你、你來照顧我」。小路就算坎坷難走也小心同行，淋得濕答答心情還是很快活。",w:"老少都會唱的國民台語情歌，歌詞象徵夫妻互相扶持，長輩一聽就有感。"},
 {t:"愛情限時批",a:"伍佰 & 萬芳",l:"台語",s:["00","A"],p:"中",st:"經典",m:"心裡愛著對方卻害羞說不出口，見面就低頭不敢講話，只好寫一封愛情的「限時批」（限時信），表達對方的溫柔、可愛讓自己深深陷入情海。",w:"經典男女對唱，婚禮網站的台語對唱清單常見，適合戀愛故事影片。"},
-{t:"咱結婚好嗎？",a:"蕭煌奇 & 安心亞",l:"台語",s:["05","10"],p:"中",st:"經典",m:"回憶兩人散步、吃麵線糊的甜蜜日常。男方直接求婚：「Honey 咱結婚好嗎」，承諾會打拚照顧對方。女方回答「我欲嫁乎你啦」，兩人一起走上愛情路。",w:"多家婚禮網站推薦為二進或新人表演的首選台語對唱，Threads 新人歌單也常出現。"},
+{t:"咱結婚好嗎？",a:"蕭煌奇 & 安心亞",y:2017,l:"台語",s:["05","10"],p:"中",st:"經典",m:"回憶兩人散步、吃麵線糊的甜蜜日常。男方直接求婚：「Honey 咱結婚好嗎」，承諾會打拚照顧對方。女方回答「我欲嫁乎你啦」，兩人一起走上愛情路。",w:"多家婚禮網站推薦為二進或新人表演的首選台語對唱，Threads 新人歌單也常出現。"},
 {t:"一人水一項",a:"任家萱 Selina & 蕭煌奇",y:2015,l:"台語",s:["08","10","C"],p:"快",st:"經典",m:"「一人水一項」意思是每個人都有自己的美。歌詞講情侶接納彼此的不完美，多看對方的優點，「互相勿棄嫌」，兩人同心就是最浪漫的事。",w:"輕快的台語對唱，常被用在二進或用餐帶動氣氛。"},
 {t:"心花開",a:"李千娜",y:2014,l:"台語",s:["06","09","10","C"],p:"快",st:"經典",m:"一看到對方就心花開、臉紅紅，想和對方黏在一起、牽手飛上天。認為兩人是天註定，願意把一生交給對方。",w:"婚禮部落格形容它「輕快又可愛」，適合二進或讓賓客跟著哼唱。",c:"歌詞「若像啉茫茫」是形容陶醉得像喝醉，沒有不妥。"},
-{t:"最愛的人",a:"李千娜 & 王大文",l:"台語",s:["00","04"],p:"中",st:"經典",m:"「你是我最愛的人，從這時直到永遠」。邀對方牽手過一輩子，這首甜蜜、純情的歌只唱給對方聽，告白「我只愛你一個」。",w:"好婚市集、婚禮部落格都推薦的清新台語對唱，歌詞簡單甜蜜。"},
-{t:"愛你一千一萬年",a:"王識賢 & 孫淑媚",l:"台語",s:["08","10","B"],p:"中",st:"經典",m:"男女對唱戀愛的心情，像春風吹來會醉。男方送上紅玫瑰代表真心，女方要對方說出愛、不要三心兩意，最後合唱「情深深、意綿綿，愛你一千一萬年」。",w:"八點檔天王天后的經典台語對唱，多個婚禮網站的對唱清單都有收錄。"},
-{t:"小姐請你給我愛",a:"羅時豐 & 王瑞霞",l:"台語",s:["00","08","B"],p:"中",st:"經典",m:"見面好幾次都假裝不熟，其實心裡愛著對方卻不敢說。終於鼓起勇氣說「小姐，請你給我愛」，對方害羞回應，有了彼此的愛，一生都沉醉在愛的世界。",w:"逗趣又喜氣的台語對唱經典，婚禮網站常推薦用在熱鬧橋段或用餐背景。"},
+{t:"最愛的人",a:"李千娜 & 王大文",y:2016,l:"台語",s:["00","04"],p:"中",st:"經典",m:"「你是我最愛的人，從這時直到永遠」。邀對方牽手過一輩子，這首甜蜜、純情的歌只唱給對方聽，告白「我只愛你一個」。",w:"好婚市集、婚禮部落格都推薦的清新台語對唱，歌詞簡單甜蜜。"},
+{t:"愛你一千一萬年",a:"王識賢 & 孫淑媚",y:2006,l:"台語",s:["08","10","B"],p:"中",st:"經典",m:"男女對唱戀愛的心情，像春風吹來會醉。男方送上紅玫瑰代表真心，女方要對方說出愛、不要三心兩意，最後合唱「情深深、意綿綿，愛你一千一萬年」。",w:"八點檔天王天后的經典台語對唱，多個婚禮網站的對唱清單都有收錄。"},
+{t:"小姐請你給我愛",a:"羅時豐 & 王瑞霞",y:1992,l:"台語",s:["00","08","B"],p:"中",st:"經典",m:"見面好幾次都假裝不熟，其實心裡愛著對方卻不敢說。終於鼓起勇氣說「小姐，請你給我愛」，對方害羞回應，有了彼此的愛，一生都沉醉在愛的世界。",w:"逗趣又喜氣的台語對唱經典，婚禮網站常推薦用在熱鬧橋段或用餐背景。"},
 {t:"惜命命",a:"羅志祥",y:2010,l:"台語",s:["02","10"],p:"快",st:"經典",m:"寫一首歌送給心愛的人，對方的一切都讓他「惜命命」（疼惜得不得了）。希望牽手到白頭，會替對方擋風颱、當靠山，叫對方什麼都不用怕。",w:"節奏輕快，適合二進，婚禮部落格的台語歌單中有推薦。",c:"台語為主，夾雜華語和英文。"},
-{t:"愛你一世人",a:"蕭煌奇",l:"台語",s:["02","04","05"],p:"慢",st:"經典",m:"對另一半的感情沒有人能阻擋，願意把一切交給對方，一起打拚、成家，平凡幸福地過一生。愛就像天上閃爍的星、溪邊不停流的水，會愛你一輩子。",w:"婚禮網站推薦為獻給另一半的台語歌，歌詞是終身承諾，適合莊重的一進。",c:"歌詞提到要把過去的不如意放下，整體仍然很正向。"},
-{t:"美麗的情歌",a:"蕭煌奇 & 曾寶儀",l:"台語",s:["00","04"],p:"中",st:"經典",m:"認識對方之後每天都像春天，喜歡兩人牽手逛街、聽對方說山盟海誓。要帶對方走遍天涯海角，下雨就當對方的雨傘，最美的情歌是兩人一起唱的歌。",w:"婚禮網站和部落格推薦的台語婚禮對唱，歌詞很適合配戀愛故事影片。"},
+{t:"愛你一世人",a:"蕭煌奇",y:2000,l:"台語",s:["02","04","05"],p:"慢",st:"經典",m:"對另一半的感情沒有人能阻擋，願意把一切交給對方，一起打拚、成家，平凡幸福地過一生。愛就像天上閃爍的星、溪邊不停流的水，會愛你一輩子。",w:"婚禮網站推薦為獻給另一半的台語歌，歌詞是終身承諾，適合莊重的一進。",c:"歌詞提到要把過去的不如意放下，整體仍然很正向。"},
+{t:"美麗的情歌",a:"蕭煌奇 & 曾寶儀",y:2011,l:"台語",s:["00","04"],p:"中",st:"經典",m:"認識對方之後每天都像春天，喜歡兩人牽手逛街、聽對方說山盟海誓。要帶對方走遍天涯海角，下雨就當對方的雨傘，最美的情歌是兩人一起唱的歌。",w:"婚禮網站和部落格推薦的台語婚禮對唱，歌詞很適合配戀愛故事影片。"},
 {t:"嫁妝",a:"陳中 & 邱芸子",l:"台語",s:["03","05"],p:"慢",st:"經典",m:"準新娘把人生交給對方，不管苦或酸、路多遠都願意同行。新郎承諾用一生最深的愛陪她，新娘說「阮的情是唯一的嫁妝」，明天就要當你的新娘。",w:"歌詞直接描寫出嫁與婚約，很適合有儀式感的進場。",c:"有一句講過去的風雨換來今日的自由，指的是苦盡甘來，不是悲傷內容。"},
-{t:"幸福的條件",a:"杜忻恬 & 郭忠祐",l:"台語",s:["00","B"],p:"中",st:"經典",m:"前面的路就算起風沙、要翻山越嶺也不害怕，因為「你是阮幸福的條件」，沒有人能取代。愛是用真心交換的，對對方的情意不會改變。",w:"婚禮網站推薦的復古風可愛台語對唱。"},
-{t:"嫁給我吧",a:"玖壹壹",l:"台語",s:["02","10","11","C"],p:"快",st:"近年流行",m:"男方向心愛的人求婚，已經跟岳父喝過三杯。承諾會煮飯洗衫、初一十五拜對方的祖先、買大房子，生了孩子他來帶，保證嫁給他一定好命。",w:"Threads 和婚禮部落格的新人歌單常見，台語加嘻哈的輕快風格適合年輕賓客。",c:"歌詞有「林北」等很口語的用詞，長輩多的場合請自行斟酌。"},
+{t:"幸福的條件",a:"杜忻恬 & 郭忠祐",y:2018,l:"台語",s:["00","B"],p:"中",st:"經典",m:"前面的路就算起風沙、要翻山越嶺也不害怕，因為「你是阮幸福的條件」，沒有人能取代。愛是用真心交換的，對對方的情意不會改變。",w:"婚禮網站推薦的復古風可愛台語對唱。"},
+{t:"嫁給我吧",a:"玖壹壹",y:2015,l:"台語",s:["02","10","11","C"],p:"快",st:"近年流行",m:"男方向心愛的人求婚，已經跟岳父喝過三杯。承諾會煮飯洗衫、初一十五拜對方的祖先、買大房子，生了孩子他來帶，保證嫁給他一定好命。",w:"Threads 和婚禮部落格的新人歌單常見，台語加嘻哈的輕快風格適合年輕賓客。",c:"歌詞有「林北」等很口語的用詞，長輩多的場合請自行斟酌。"},
+{t:"四季紅",a:"純純、艷艷（原唱）",y:1938,l:"台語",s:["10","A","B"],p:"中",st:"經典",m:"一對戀人從春天唱到冬天，每一段都想開口說心事，又有點害羞。四季的景色都用「紅」來比喻愈來愈熱的感情。",w:"PTT 新人分享的台語婚宴歌單把它排在用餐音樂（民謠純音樂版）。",c:"歌詞是男女調情對唱，風格很老派，建議用純音樂版當背景。",src:"https://www.ptt.cc/bbs/GetMarry/M.1473498204.A.C4B.html"},
+{t:"搖嬰仔歌",a:"呂泉生（曲）／盧雲生（詞）",y:1945,l:"台語",s:["00","01","07"],p:"慢",st:"經典",m:"父母搖著孩子入睡，盼他一暝大一寸。歌詞從養育、讀書一路唱到孩子成家，父母這才放心。",w:"婚禮歌單把它列在成長 MV 和謝親恩用曲，歌詞直接唱到子女嫁娶。",c:"曲調偏感傷，適合溫情段落，不適合歡樂環節。",src:"https://zoeyhsu.wordpress.com/2017/12/08/%E6%88%91%E5%80%91%E7%9A%84%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%EF%BC%8C%E8%B6%85%E6%9C%89fu%EF%BC%8C%E7%B5%95%E5%B0%8D%E8%A8%8E%E5%96%9C%E7%9A%84%E7%B2%BE%E9%81%B818%E9%A6%96%E5%88%86%E4%BA%AB/"},
+{t:"心肝寶貝",a:"鳳飛飛",y:1991,l:"台語",s:["00","03","07"],p:"慢",st:"經典",m:"父母看著寶貝孩子出生、收涎、學走路，一路把他捧在手心。心裡盼孩子聰明、健康，快快長大。",w:"PTT 婚禮台語歌單把它列在「訴說親情」，也是常見的成長 MV 用曲。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"雙人枕頭",a:"王識賢",y:1991,l:"台語",s:["08","10","B"],p:"中",st:"經典",m:"用雙人枕頭、厚棉被比喻：身邊少了你就會孤單、畏寒。唱的人說對方是自己生命的溫泉、靈魂的另一半，為對方什麼苦都願意擔。",w:"介紹文章提到它在婚宴喜慶上是炒熱氣氛、表達情意的必點男女對唱。",src:"https://uptogo.com.tw/%E5%A8%9B%E6%A8%82/%E5%90%8D%E4%BA%BA/%E9%9B%99%E4%BA%BA%E6%9E%95%E9%A0%AD%E5%8E%9F%E5%94%B1%E6%98%AF%E8%AA%B0%EF%BC%9F/"},
+{t:"愛你到350歲",a:"黃乙玲",y:1998,l:"台語",s:["08","09","10"],p:"快",st:"經典",m:"女生打扮好去約會，覺得終於遇到人生知己。她大方說要和對方相愛到 350 歲、到白頭。",w:"PTT 婚禮台語歌單把它列在「輕快獨唱篇」。",c:"有一句帶過過去的情史，只是輕描淡寫。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"心中無別人",a:"五月天",y:2000,l:"台語",s:["02","04","07"],p:"中",st:"經典",m:"回想兩人牽手散步、一起許願的日子。對方的出現改變了自己的人生，所以想說心裡只有你一個人。",w:"weddings.tw 的〈必選 20 首台語婚禮音樂〉收錄這首。",c:"歌詞中段有一點對平凡人生的怨嘆，整體仍是深情告白。",src:"https://www.weddings.tw/%E5%8F%B0%E5%AE%A2%E9%A2%A8%E5%8F%B0%E8%AA%9E%E5%A9%9A%E7%A6%AE%E9%9F%B3%E6%A8%82%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%E6%8E%A8%E8%96%A6/"},
+{t:"你是阮的溫泉",a:"王識賢 & 孫淑媚",y:2005,l:"台語",s:["08","10"],p:"中",st:"經典",m:"今夜有你作伴就不怕孤單寒冷，你就像溫泉一樣溫暖我。兩人約定只愛彼此，一起走感情路。",w:"PTT 婚禮台語歌單把它列在「輕快合唱篇」。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"幸福的通知",a:"黃妃",y:2005,l:"台語",s:["08","09","12"],p:"快",st:"經典",m:"寂寞的冬天過去，愛情終於來敲門。旁人都祝福兩人成雙成對，唱的人用歌聲宣布彼此相愛，往後每天都是春天。",w:"PTT 婚禮台語歌單把它列在「輕快獨唱篇」。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"你是我的寶貝",a:"辦桌二人組",y:2006,l:"台語",s:["08","11","12"],p:"中",st:"經典",m:"對方的笑容像春天的花，讓人看得入迷。唱的人鼓起勇氣表白一生只愛你，想牽手一起放風箏。",w:"PTT 婚禮台語歌單把它列在「輕快合唱篇」，辦桌風格很適合熱鬧橋段。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"因為有你",a:"王識賢 & 秀蘭瑪雅",y:2007,l:"台語",s:["04","06","10"],p:"中",st:"經典",m:"感謝老天安排兩人相識。只要彼此相伴，這輩子就不孤單，生命也因為對方而美麗。",w:"PTT 婚禮台語歌單把它列在「輕快合唱篇」。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"嫁乎你喲",a:"吳淑敏",y:2007,l:"台語",s:["03","09"],p:"中",st:"經典",m:"新娘說有你在就不怕苦，願意一步一步和你走出堅定的路。她開心宣布要嫁給你，也請你好好疼惜。",w:"PTT 婚禮台語歌單把它列在「抒情獨唱篇」。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"新娘衫",a:"蘇路",y:2009,l:"台語",s:["03","04"],p:"慢",st:"經典",m:"出嫁前一晚，新娘穿上白紗，知道新郎正在門外等她。她承諾從此展開新生活，永遠做對方的伴。",w:"PTT 婚禮台語歌單收錄這首，歌詞直接寫穿新娘衫走進禮堂。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"尚水的伴",a:"翁立友",y:2010,l:"台語",s:["02","05"],p:"慢",st:"經典",m:"男生發誓就算海枯石爛、情路難走，也要把對方疼入心肝。他說對方是自己今生來世最美的伴侶。",w:"PTT 婚禮台語歌單和 StoryWed 的台語婚禮歌單都收錄這首。",c:"副歌用了比較重的比喻來表達深情，介意的人可以斟酌。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html"},
+{t:"歸宿",a:"李婭莎",y:2011,l:"台語",s:["03","05","07"],p:"慢",st:"經典",m:"看見燕子築巢、鴛鴦成對，女生相信冥冥中與對方有約。不論嫁好嫁壞，對方就是她最後的歸宿，要牽手到老。",w:"weddings.tw 台語婚禮歌單把它列在家人致謝段落。",c:"有一句講艱苦委屈要忍耐，是比較傳統的婚姻觀。",src:"https://www.weddings.tw/%E5%8F%B0%E5%AE%A2%E9%A2%A8%E5%8F%B0%E8%AA%9E%E5%A9%9A%E7%A6%AE%E9%9F%B3%E6%A8%82%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%E6%8E%A8%E8%96%A6/"},
+{t:"姻緣天註定",a:"郭婷筠 & 蔡佳麟",y:2014,l:"台語",s:["06","09","10"],p:"快",st:"經典",m:"男女對唱感謝月老牽線，說兩人的緣分是天註定。婚後你煮飯我洗碗，配偶欄寫著你的名字，從此每天準時回家。",w:"PTT 新人分享的台語婚宴歌單把它列在迎賓歌曲。",c:"台語為主，夾幾句華語。",src:"https://www.ptt.cc/bbs/GetMarry/M.1473498204.A.C4B.html"},
+{t:"歡喜來恰恰",a:"金四喜",y:2015,l:"台語",s:["06","08","11","12"],p:"快",st:"近年流行",m:"音樂一下大家就跳恰恰，把酒斟滿、一起熱鬧。歌詞叫大家放開心胸、跟著節奏動起來。",w:"婚禮網站說這首能把現場氣氛帶到最高點，它也是電影《大喜臨門》的主題曲。",src:"https://www.storywed.com.tw/column_detail/349"},
+{t:"牽手的幸福",a:"黃文星",y:2016,l:"台語",s:["02","04"],p:"中",st:"近年流行",m:"從一場西北雨想起兩人一路走來的感情，有酸有苦，但有你就快樂。男生承諾保護、照顧對方，同心走未來的路。",w:"婚禮文章形容它根本是為新郎進場量身打造的主題曲。",src:"https://www.marry.com.tw/topic/3136"},
+{t:"感謝",a:"曹雅雯",y:2017,l:"台語",s:["01","07"],p:"慢",st:"近年流行",m:"分別描寫媽媽風雨無阻的照顧、爸爸默默扛起整個家。孩子輕聲說謝謝，換自己當父母的靠山。",w:"weddings.tw 台語婚禮歌單把它列在感謝家人段落。",src:"https://www.weddings.tw/%E5%8F%B0%E5%AE%A2%E9%A2%A8%E5%8F%B0%E8%AA%9E%E5%A9%9A%E7%A6%AE%E9%9F%B3%E6%A8%82%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%E6%8E%A8%E8%96%A6/"},
+{t:"無夠撒嬌",a:"張三李四",y:2017,l:"台語",s:["02","09","10"],p:"快",st:"近年流行",m:"男生被女友迷得暈頭轉向，嘴上抱怨她有時很兇，其實甘之如飴。他說願意隨傳隨到，把她當女王寵，只希望她多撒嬌一點。",w:"婚禮樂團把它列入台語婚禮對唱推薦，說它適合當眾告白。",c:"有一些口語玩笑話，風格比較俏皮。",src:"https://liveband.clown.com.tw/2024-wedding-music.html"},
+{t:"佮你牽手",a:"李婭莎 & 蕭煌奇",y:2020,l:"台語",s:["04","05","06"],p:"中",st:"近年流行",m:"男女對唱：男生承諾讓對方依靠，女生把心交給他。兩人相信牽手走下去，幸福會一路陪著。",w:"StoryWed 和 weddings.tw 的台語婚禮對唱推薦都收錄這首。",src:"https://www.storywed.com.tw/column_detail/349"},
+{t:"惜你每一天",a:"洪榮宏 & 陳嘉樺",y:2021,l:"台語",s:["04","06","08"],p:"中",st:"近年流行",m:"感謝月老幫忙，讓兩人相識、結成雙。人生最美的願望，就是每天愛你、疼你，牽手到永遠。",w:"StoryWed 和 weddings.tw 的台語婚禮對唱推薦都收錄這首。",src:"https://www.storywed.com.tw/column_detail/349"},
+{t:"心內有你是幸福",a:"郭婷筠",y:2021,l:"台語",s:["05","07","A"],p:"慢",st:"近年流行",m:"用雨傘、風箏線比喻兩人的緣分，不怕風雨吹散。不必富貴，彼此陪伴、平凡過一生就很滿足。",w:"weddings.tw 的〈必選 20 首台語婚禮音樂〉收錄這首。",src:"https://www.weddings.tw/%E5%8F%B0%E5%AE%A2%E9%A2%A8%E5%8F%B0%E8%AA%9E%E5%A9%9A%E7%A6%AE%E9%9F%B3%E6%A8%82%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%E6%8E%A8%E8%96%A6/"},
+{t:"蚵仔麵線",a:"琳誼 Ring",y:2021,l:"台語",s:["09","10","B"],p:"中",st:"近年流行",m:"蚵仔和麵線本來個性完全不同，煮在一起卻最對味。就像兩個陌生人走在一起，平淡的人生有了你就變香，也不再孤單。",w:"豪鼎婚宴會館的婚禮歌單收錄它，它也是《俗女養成記 2》插曲。",c:"台語為主，夾一些華語。",src:"https://www.how-dine.com.tw/news/wedding-music2"},
+{t:"姊妹仔",a:"旺福",y:2021,l:"台語",s:["09"],p:"中",st:"近年流行",m:"唱給最好的姊妹：人生起起落落都走在同一條路上。成功時第一個擁抱，難過時互相依靠，下輩子還要當姊妹。",w:"豪鼎婚宴會館的婚禮歌單把它列在「抽捧花、指定捧花」。",c:"不是情歌，講的是姊妹情誼。",src:"https://www.how-dine.com.tw/news/wedding-music2"},
 
 /* ---------- 日文 ---------- */
 {t:"マリーゴールド",z:"萬壽菊",a:"あいみょん",y:2018,l:"日文",s:["07","A","B"],p:"中",st:"經典",m:"把戀人比作夏天裡隨風搖曳的萬壽菊，用幾個零碎的戀愛畫面，描寫想牽著對方的手、就算相隔遙遠也想一直有連結的心情。",w:"あいみょん的代表作，在台灣與日本都很有名，輕鬆的民謠搖滾適合當背景音樂。",c:"歌詞偶爾帶一點淡淡的不安，但整體是在講兩人的愛，沒有分手情節。"},
@@ -408,6 +472,30 @@ const SONGS=[
 {t:"Family Song",a:"星野源",y:2017,l:"日文",s:["01","C"],p:"中",st:"經典",m:"祝願重要的人能夠幸福，歌詞說家人不一定只靠血緣，願你的日子平穩、天天有笑容。",w:"2026 年日本婚禮退場排行第 1 名。"},
 {t:"糸",z:"線",a:"中島みゆき",y:1992,l:"日文",s:["00","05","07","B"],p:"慢",st:"經典",m:"把兩人比作直線和橫線，說兩條線交織在一起就能成為一塊布，溫暖某個人，也可能保護某個人的傷口；講的是命中注定的相遇。",w:"日本最經典的婚禮歌之一，菅田將暉等人翻唱的版本也很受歡迎。"},
 {t:"カタオモイ",z:"單相思",a:"Aimer",y:2016,l:"日文",s:["05","B"],p:"慢",st:"近年流行",m:"雖然歌名是「單相思」，其實寫的是兩人已經在一起之後，愛意卻越來越深、像永遠在單戀對方一樣，就算老了、臉上長出皺紋也想一直在一起。",w:"台灣 Dcard 婚禮日文歌單有人推，日本也常被當作求婚歌。",c:"歌名是「單相思」，賓客看到歌名可能會誤會，建議在主持詞或字幕中說明歌詞的意思。"},
+{t:"てんとう虫のサンバ",z:"瓢蟲森巴",a:"チェリッシュ",y:1973,l:"日文",s:["09","10","A"],p:"中",st:"經典",m:"以森林裡的小動物與瓢蟲為新人舉辦婚禮的童話場景，描寫大家圍繞著新郎新婦跳舞祝福。整首歌充滿天真歡樂的祝賀氣氛。",w:"日本昭和時代最具代表性的婚禮祝賀歌，常年列入結婚式定番曲。",src:"https://www.ragnet.co.jp/fifties-wedding-songs/2"},
+{t:"秋桜",z:"秋櫻",a:"山口百恵",y:1977,l:"日文",s:["00","07"],p:"慢",st:"經典",m:"女兒在出嫁前夕與母親相處，感受到母親的叮嚀與不捨。她回想成長點滴，向母親表達感謝並承諾會幸福。",w:"日本婚禮中新娘朗讀給父母的信時常用的背景音樂。",c:"曲調帶感傷與離家的不捨，適合溫情段落，不適合歡樂時段。",src:"https://utaten.com/karaoke/wedding-song-nostalgic/"},
+{t:"本気でオンリーユー (Let's Get Married)",z:"認真只愛你",a:"竹内まりや",y:1984,l:"日文",s:["03","05"],p:"慢",st:"經典",m:"敘述者確信對方就是唯一的人，真誠地向對方表達想要結婚、共度一生的心意。曲中帶有求婚般的甜蜜承諾。",w:"日本懷舊婚禮歌單推薦用於入場與切蛋糕場景。",src:"https://utaten.com/karaoke/wedding-song-nostalgic/"},
+{t:"乾杯",a:"長渕剛",y:1988,l:"日文",s:["08","C"],p:"慢",st:"經典",m:"為踏上新人生的老朋友舉杯，回顧一起走過的青春歲月。歌者祝福對方在新生活中堅強幸福。",w:"日本婚禮祝賀新生活與舉杯的經典定番曲（原曲 1980 年，1988 年重錄單曲大熱）。",c:"節奏偏慢，舉杯時建議只播副歌段落。",src:"https://utaten.com/karaoke/wedding-song-nostalgic/"},
+{t:"うれしい!たのしい!大好き!",z:"開心！快樂！最喜歡！",a:"DREAMS COME TRUE",y:1989,l:"日文",s:["06","11","C"],p:"快",st:"經典",m:"描寫戀愛時看什麼都閃閃發光的雀躍心情。因為喜歡對方，每天都充滿快樂與驚喜。",w:"日本婚禮歌單推薦用於切蛋糕與退場等歡樂場景。",src:"https://utaten.com/karaoke/wedding-song-nostalgic/"},
+{t:"愛は勝つ",z:"愛必勝",a:"KAN",y:1990,l:"日文",s:["08","11","12"],p:"快",st:"經典",m:"鼓勵正在煩惱的人不要放棄，只要相信，愛最後一定會贏。整首歌積極熱血，充滿正能量。",w:"跨世代傳唱的日本婚禮定番應援歌。",src:"https://www.ragnet.co.jp/fifties-wedding-songs/2"},
+{t:"君がいるだけで",z:"只要有你在",a:"米米CLUB",y:1992,l:"日文",s:["06","10","B"],p:"中",st:"經典",m:"只要有你在身邊，自己就能變得堅強而坦率。歌者感謝對方的存在讓自己的世界變得美好。",w:"銷量近三百萬張的金曲，被列為婚禮定番情歌。",src:"https://www.ragnet.co.jp/fifties-wedding-songs/2"},
+{t:"Get Along Together",a:"山根康広",y:1993,l:"日文",s:["05","07"],p:"慢",st:"經典",m:"男方誠懇地向心愛的人傾訴，想一起度過往後的每一天。曲中承諾會守護對方，是一首求婚般的抒情曲。",w:"列入日本婚禮懷舊歌單的經典求婚曲。",src:"https://www.ragnet.co.jp/fifties-wedding-songs/2"},
+{t:"ロマンスの神様",z:"戀愛之神",a:"広瀬香美",y:1993,l:"日文",s:["09","11"],p:"快",st:"經典",m:"單身女生向戀愛之神祈禱，希望在聚會中遇見理想對象。最後真的邂逅了心動的人，雀躍不已。",w:"日本懷舊婚禮歌單推薦曲，祈求好姻緣的主題跟丟捧花很搭。",src:"https://utaten.com/karaoke/wedding-song-nostalgic/"},
+{t:"ハッピーサマーウェディング",z:"快樂夏日婚禮",a:"モーニング娘。",y:2000,l:"日文",s:["09","10","11"],p:"快",st:"經典",m:"新娘在婚禮上開心地向家人道謝，並宣告要與心愛的人展開新生活。歌曲輕快熱鬧，充滿祝賀感。",w:"日本婚禮歌單收錄的熱鬧婚禮主題曲。",src:"https://www.ragnet.co.jp/fifties-wedding-songs/2"},
+{t:"明日晴れるかな",z:"明天會放晴嗎",a:"桑田佳祐",y:2007,l:"日文",s:["07","C"],p:"中",st:"經典",m:"面對人生的迷惘與遺憾，仍鼓起勇氣相信明天會更好。這是一首溫暖向前的人生之歌。",w:"WEDDING MUSIC BOX 2025 送賓第 1 名，也是アニヴェルセル退場榜上曲。",c:"歌詞帶有對過去遺憾的回顧，整體仍正向。",src:"http://weddmusicbox.com/ranking/"},
+{t:"WINDING ROAD",a:"絢香×コブクロ",y:2007,l:"日文",s:["10","12"],p:"中",st:"經典",m:"人生道路蜿蜒曲折，但有彼此相伴就能一起走下去。曲中互相鼓勵、迎向未來。",w:"日本婚禮歌單推薦用於再入場等高潮場景。",src:"https://utaten.com/karaoke/wedding-song-nostalgic/"},
+{t:"GIFT",a:"Mr.Children",y:2008,l:"日文",s:["07","12"],p:"中",st:"經典",m:"想把最珍貴的禮物送給一直努力的你。歌者肯定對方走過的路，並給予溫柔的祝福。",w:"WEDDING MUSIC BOX 2025 花束・記念品贈呈第 2 名。",src:"http://weddmusicbox.com/ranking/"},
+{t:"気まぐれロマンティック",z:"任性的浪漫",a:"いきものがかり",y:2008,l:"日文",s:["06","09","11"],p:"快",st:"經典",m:"女生在戀愛中忽喜忽憂、任性撒嬌，但心裡其實滿滿都是喜歡。這是一首俏皮可愛的戀愛歌。",w:"アニヴェルセル 2026 結婚式 BGM 總合排行第 10 名。",src:"https://prtimes.jp/main/html/rd/p/000000413.000007963.html"},
+{t:"StaRt",a:"Mrs. GREEN APPLE",y:2015,l:"日文",s:["00","04","08"],p:"快",st:"近年流行",m:"鼓勵踏出新的一步，迎接嶄新的開始。曲風充滿期待與衝勁。",w:"アニヴェルセル開場影片第 1 名，也在入場及乾杯榜上；WEDDING MUSIC BOX 乾杯第 3 名。",src:"https://www.anniversaire.co.jp/brand/omotte/magazine/preparation/12019/"},
+{t:"愛を叫べ",z:"大聲說愛",a:"嵐",y:2015,l:"日文",s:["10","11","B"],p:"快",st:"近年流行",m:"男生鼓起勇氣大聲向心愛的人表白，宣告想與她共度一生。歌曲有求婚般的熱鬧氣氛。",w:"WEDDING MUSIC BOX 2025 邦楽總榜第 10 名。",src:"http://weddmusicbox.com/ranking/"},
+{t:"Just You and I",a:"安室奈美恵",y:2017,l:"日文",s:["03","04"],p:"慢",st:"近年流行",m:"兩人互許承諾，無論發生什麼都要相信彼此、一起走下去。這是溫柔而堅定的愛之歌。",w:"被稱為婚禮新定番，推薦用於新人入場與成長影片。",src:"https://utaten.com/specialArticle/index/10142"},
+{t:"Love me, Love you",a:"Mrs. GREEN APPLE",y:2018,l:"日文",s:["06","08"],p:"快",st:"近年流行",m:"愛自己也愛對方，彼此真誠地傳達心意。曲風輕快明亮、充滿幸福感。",w:"ゼクシィ推薦的乾杯與切蛋糕曲；WEDDING MUSIC BOX 2025 邦楽第 7 名。",src:"https://zexy.net/article/app000000236/"},
+{t:"CHEERS",a:"Mrs. GREEN APPLE",y:2019,l:"日文",s:["06","08"],p:"快",st:"近年流行",m:"即使人生有辛苦，也要為今天和身邊的夥伴舉杯。曲中珍惜當下的喜悅。",w:"WEDDING MUSIC BOX 2025 乾杯第 1 名、アニヴェルセル乾杯第 2 名。",src:"http://weddmusicbox.com/ranking/"},
+{t:"I LOVE...",a:"Official髭男dism",y:2020,l:"日文",s:["05","10"],p:"中",st:"近年流行",m:"遇見你之後，世界的顏色都改變了。歌者接納彼此的不同，想把這份愛好好守住。",w:"WEDDING MUSIC BOX 2025 お色直し入場第 2 名。",src:"http://weddmusicbox.com/ranking/"},
+{t:"きらり",z:"閃耀",a:"藤井風",y:2021,l:"日文",s:["10","11","C"],p:"快",st:"近年流行",m:"放下過去，帶著閃閃發亮的心情奔向新的旅程。歌曲輕快自在。",w:"ゼクシィ推薦的婚禮桌邊巡禮 BGM。",src:"https://zexy.net/article/app000000236/"},
+{t:"ダンスホール",z:"舞廳",a:"Mrs. GREEN APPLE",y:2022,l:"日文",s:["08","10","11"],p:"快",st:"近年流行",m:"人生就像舞池，不必在意別人眼光，盡情舞動、享受每一天。整首歌愉快有活力。",w:"WEDDING MUSIC BOX 2025 お色直し入場第 1 名、邦楽第 5 名。",src:"http://weddmusicbox.com/ranking/"},
+{t:"アドベンチャー",z:"冒險",a:"YOASOBI",y:2023,l:"日文",s:["00","11"],p:"快",st:"近年流行",m:"和重要的人一起踏上充滿驚喜的冒險。歌曲描寫珍惜共度的歡樂時光。",w:"アニヴェルセル開場影片排行第 3 名。",src:"https://www.anniversaire.co.jp/brand/omotte/magazine/preparation/12019/"},
+{t:"愛の花",z:"愛之花",a:"あいみょん",y:2023,l:"日文",s:["03","07"],p:"慢",st:"近年流行",m:"把對心愛之人的感情比喻成悄悄綻放的花。歌者訴說想一直守在對方身旁的深情。",w:"ゼクシィ推薦的新人入場曲。",c:"歌詞帶思念與期盼重逢的情緒，屬溫柔深情，不是熱鬧型。",src:"https://zexy.net/article/app000000236/"},
 
 /* ---------- 韓文 ---------- */
 {t:"매일 그대와",z:"每天和你",a:"들국화（野菊花）",y:1985,l:"韓文",s:["07","A","B"],p:"中",st:"經典",m:"歌詞想像每天早上和對方一起醒來，一起度過平凡的日常，說只要每天都和你在一起就很幸福。",w:"韓國最經典的結婚歌之一，旋律溫暖，長輩和年輕人都聽過。"},
@@ -430,7 +518,27 @@ const SONGS=[
 {t:"가족사진",z:"全家福",a:"김진호（金振浩）",y:2013,l:"韓文",s:["00"],p:"慢",st:"經典",m:"看著全家福照片，想起父母為了讓自己「開花」，甘願把青春化成養分，現在想好好報答他們。",w:"韓國感謝父母影片的首選歌，常常讓全場落淚。",c:"情緒很重，搭配歡樂畫面時要注意氣氛銜接。"},
 {t:"아버지",z:"父親",a:"인순이（印順伊）",y:2009,l:"韓文",s:["00","01"],p:"慢",st:"經典",m:"從前不懂父親沉默的愛，也一直沒有走近他，現在希望趁還來得及，對日漸老去的父親說出「我愛你」。",w:"韓國感謝父母環節的經典曲，特別適合新娘獻給爸爸。"},
 {t:"엄마가 딸에게",z:"媽媽給女兒",a:"양희은（楊姬銀）",y:2015,l:"韓文",s:["00","03"],p:"慢",st:"經典",m:"用媽媽的口吻對女兒說話，說自己也是第一次當媽媽、做得不夠好，只希望女兒成為真正的自己、過得幸福。",w:"很適合新娘成長影片或母女橋段，歌詞很溫柔。"},
-{t:"걱정말아요 그대",z:"別擔心，親愛的",a:"이적（李笛）／原唱 전인권",y:2015,l:"韓文",s:["00","C"],p:"中",st:"經典",m:"告訴對方不用再為過去的事後悔，一起唱歌、懷著新夢想往前走。",w:"《請回答1988》的主題曲，懷舊溫暖，很適合配童年照片。"}
+{t:"걱정말아요 그대",z:"別擔心，親愛的",a:"이적（李笛）／原唱 전인권",y:2015,l:"韓文",s:["00","C"],p:"中",st:"經典",m:"告訴對方不用再為過去的事後悔，一起唱歌、懷著新夢想往前走。",w:"《請回答1988》的主題曲，懷舊溫暖，很適合配童年照片。"},
+{t:"사랑으로",z:"以愛",a:"해바라기（向日葵樂團）",y:1989,l:"韓文",s:["01","07","C"],p:"慢",st:"經典",m:"歌者期許自己用一生的愛去照亮身邊的人，願意為他人奉獻、成為溫暖的力量。曲風莊重溫厚，充滿對未來的祝福。",w:"韓國媒體列為婚禮上最常被演唱的經典祝歌之一。",src:"https://weekly.khan.co.kr/article/6405"},
+{t:"너를 사랑해",z:"我愛你",a:"한동준（韓東俊）",y:1991,l:"韓文",s:["05","B"],p:"慢",st:"經典",m:"歌者向對方真誠表白，說明對方在自己心中無可取代的分量，承諾會一直珍惜這份感情。",w:"韓國媒體將它與〈사랑의 서약〉並列為婚禮常唱的男聲祝歌。",src:"https://weekly.khan.co.kr/article/6405"},
+{t:"사랑의 서약",z:"愛的誓約",a:"한동준（韓東俊）",y:1995,l:"韓文",s:["04","05"],p:"慢",st:"經典",m:"以誓詞般的口吻許下承諾：無論未來順遂或艱難都會相守，一起走完人生。",w:"韓國與台灣的韓文婚禮歌單都列為祝歌必備曲，歌詞主題就是婚約誓言。",src:"https://weekly.khan.co.kr/article/6405"},
+{t:"사랑을 위하여",z:"為了愛",a:"김종환（金鐘煥）",y:1997,l:"韓文",s:["01","07"],p:"慢",st:"經典",m:"歌者想成為能讓對方安心依靠的人，願意付出一切，與對方相伴到老。",w:"韓國媒體將它列為婚禮場合常見的代表性祝歌。",src:"https://weekly.khan.co.kr/article/6405"},
+{t:"내가 만일",z:"如果我是",a:"안치환（安致煥）",y:1997,l:"韓文",s:["05","07"],p:"慢",st:"經典",m:"歌者用一連串「假如我是天空、是風」的比喻，說自己願意化作各種形態守護、照亮對方。",w:"韓國媒體將它列為婚禮上常被演唱的祝歌。",src:"https://weekly.khan.co.kr/article/6405"},
+{t:"신부에게",z:"致新娘",a:"유리상자（玻璃箱子）",y:1999,l:"韓文",s:["03","05"],p:"慢",st:"經典",m:"新郎對即將成為妻子的人深情告白，感謝她願意託付一生，並承諾會讓她幸福。",w:"韓國媒體稱它是婚禮上最常演唱的祝歌之一，台灣 PTT 的歌單也有收錄。",src:"https://weekly.khan.co.kr/article/6405"},
+{t:"Marry U",a:"슈퍼주니어（Super Junior）",y:2007,l:"韓文",s:["04","06"],p:"中",st:"經典",m:"以求婚為主題，男生承諾會一輩子愛護對方，邀請她與自己共度餘生。",w:"PTT KoreanPop 板的婚禮歌單討論中被推薦，也是知名的求婚歌。",src:"https://www.ptt.cc/bbs/KoreanPop/M.1560867484.A.B56.html"},
+{t:"결혼해줄래",z:"嫁給我好嗎",a:"이승기（李昇基）",y:2009,l:"韓文",s:["02","10"],p:"中",st:"經典",m:"男生用輕快俏皮的方式直接求婚，描繪婚後一起生活的美好想像。",w:"韓國婚禮網站的男聲祝歌推薦與 PTT 的婚禮歌單都有列入。",src:"https://www.ptt.cc/bbs/KoreanPop/M.1560867484.A.B56.html"},
+{t:"그대를 사랑하는 10가지 이유",z:"愛你的十個理由",a:"이석훈（李錫勳）",y:2010,l:"韓文",s:["06","10"],p:"中",st:"經典",m:"歌者細數愛上對方的種種理由，甜蜜地表達對方的一切都令他心動。",w:"韓國結婚準備網站推薦為「明亮氣氛」的男聲祝歌。",src:"https://www.directwedding.co.kr/blog/celebration-song"},
+{t:"행복 (Happiness)",z:"幸福",a:"Red Velvet",y:2014,l:"韓文",s:["08","11","B"],p:"快",st:"經典",m:"節奏明快，唱出想把快樂與幸福分享給大家的興奮心情。",w:"台灣婚禮平台 WeddingDay 的韓文婚禮歌單列入女團歡樂曲目。",src:"https://www.weddingday.com.tw/blog/archives/150607"},
+{t:"꽃길만 걷게 해줄게",z:"只讓你走花路",a:"데이브레이크（Daybreak）",y:2016,l:"韓文",s:["08","10","C"],p:"中",st:"近年流行",m:"歌者向愛人保證，往後的日子只讓她走在開滿鮮花的路上，要給她幸福與快樂。",w:"韓國婚禮媒體 Wedding21 的入退場曲 Best 10，以及結婚準備網站的新人行進曲推薦都有收錄。",src:"https://www.wedding21.co.kr/news/articleView.html?idxno=249624"},
+{t:"You Are My Everything",a:"거미（Gummy）",y:2016,l:"韓文",s:["03","06"],p:"慢",st:"近年流行",m:"歌者說對方就是自己的全部，不論發生什麼都會守在身邊。",w:"韓國結婚準備網站的女聲祝歌推薦與台灣 WeddingDay 的韓文婚禮歌單都有收錄。",src:"https://www.directwedding.co.kr/blog/celebration-song"},
+{t:"CHEER UP",a:"TWICE",y:2016,l:"韓文",s:["09","11"],p:"快",st:"近年流行",m:"女孩面對追求者，一邊故作矜持，一邊要對方加油、多努力一點，語氣俏皮可愛。",w:"台灣婚禮網站 Storywed 推薦用於抽捧花與送客。",c:"歌詞是戀愛前的追求階段，適合當歡樂背景，不是在講婚姻承諾。",src:"https://www.storywed.com.tw/column_detail/366"},
+{t:"시작",z:"開始",a:"가호（Gaho）",y:2020,l:"韓文",s:["02","12"],p:"中",st:"近年流行",m:"描寫踏上新起點時的決心與熱血，相信自己會勇往直前。",w:"韓國結婚準備網站推薦為新郎進場曲，因歌詞象徵新的開始。",src:"https://www.directwedding.co.kr/blog/wedding-bgm"},
+{t:"아로하",z:"Aloha",a:"조정석（曹政奭）",y:2020,l:"韓文",s:["06","08"],p:"中",st:"近年流行",m:"歌者承諾會一直在對方身邊守護，讓對方安心依靠，語氣溫暖明亮。",w:"韓國結婚準備網站推薦為能炒熱氣氛的明亮祝歌。",c:"這是《機智醫生生活》OST 翻唱版，原唱為 쿨（Cool）。",src:"https://www.directwedding.co.kr/blog/celebration-song"},
+{t:"마음을 드려요",z:"獻上我的心",a:"아이유（IU）",y:2020,l:"韓文",s:["06","07"],p:"慢",st:"近年流行",m:"歌者把自己最珍貴的心交給對方，靜靜訴說長久以來的愛意與珍惜。",w:"韓國結婚準備網站推薦為溫暖感人的女聲祝歌。",src:"https://www.directwedding.co.kr/blog/celebration-song"},
+{t:"잠시 (Telepathy)",z:"Telepathy",a:"방탄소년단（BTS）",y:2020,l:"韓文",s:["11","12"],p:"快",st:"近年流行",m:"輕快地唱出彼此心意相通、即使分隔兩地也能感受到對方的喜悅。",w:"台灣婚禮網站 Storywed 推薦用於歡樂送客與互動環節。",src:"https://www.storywed.com.tw/column_detail/366"},
+{t:"Celebrity",a:"아이유（IU）",y:2021,l:"韓文",s:["11","12"],p:"快",st:"近年流行",m:"鼓勵那些覺得自己與眾不同的人，告訴對方本來的樣子就閃閃發光，是獨一無二的明星。",w:"台灣婚禮網站 Storywed 推薦用於送客、遊戲等環節。",src:"https://www.storywed.com.tw/column_detail/366"},
+{t:"Dun Dun Dance",a:"오마이걸（OH MY GIRL）",y:2021,l:"韓文",s:["09","11"],p:"快",st:"近年流行",m:"邀請對方一起盡情跳舞，享受兩人一同發光的愉快時光。",w:"台灣婚禮網站 Storywed 推薦用於傳捧花與互動時刻。",src:"https://www.storywed.com.tw/column_detail/366"},
+{t:"사랑인가 봐",z:"好像是愛情",a:"멜로망스（MeloMance）",y:2022,l:"韓文",s:["06","08","A"],p:"中",st:"近年流行",m:"歌者發覺自己總是想著對方、因為對方而心動，終於確定這就是愛情。",w:"韓國結婚準備網站推薦為明亮的男聲祝歌，Storywed 也列入歡樂用餐歌單。",src:"https://www.directwedding.co.kr/blog/celebration-song"}
 ];
 
 const TRAPS=[
@@ -466,7 +574,28 @@ const TRAPS=[
 {t:"잘못된 만남",a:"김건모（金建模）",l:"韓文",r:"節奏很嗨，但歌詞是介紹女友給好朋友認識，結果兩人走在一起，是被劈腿的故事。",g:["劈腿"]},
 {t:"봄이 좋냐??",a:"10cm",l:"韓文",r:"單身者酸情侶的歌，歌詞詛咒情侶們分手。",g:["分手"]},
 {t:"예뻤어",a:"DAY6",l:"韓文",r:"雖然很紅，但歌詞是在回憶已經分手的前任。",g:["分手"]},
-{t:"어떻게 이별까지 사랑하겠어, 널 사랑하는 거지",a:"AKMU（樂童音樂家）",l:"韓文",r:"歌名和歌詞都在講分手，愛到連離別都只能接受。",g:["分手"]}
+{t:"어떻게 이별까지 사랑하겠어, 널 사랑하는 거지",a:"AKMU（樂童音樂家）",l:"韓文",r:"歌名和歌詞都在講分手，愛到連離別都只能接受。",g:["分手"]},
+{t:"I Will Always Love You",a:"Whitney Houston",l:"英文",r:"這是道別的歌，內容是主角決定離開，同時祝福對方，常被誤當成婚禮情歌。",g:["分手"]},
+{t:"Every Breath You Take",a:"The Police",l:"英文",r:"旋律很浪漫，但內容是分手後對前任的監視與執念，作者 Sting 自己也說這首歌很陰暗。",g:["分手", "控制慾"]},
+{t:"Careless Whisper",a:"George Michael",l:"英文",r:"主角背叛了伴侶，歌曲描寫他的愧疚和即將失去的感情。",g:["劈腿", "分手"]},
+{t:"Marry Me",a:"Thomas Rhett",l:"英文",r:"歌名像求婚，其實是主角看著心愛的人嫁給別人，屬於單戀遺憾。",g:["單戀", "嫁給別人"]},
+{t:"Single Ladies (Put a Ring on It)",a:"Beyoncé",l:"英文",r:"這是捧花環節的招牌歌，但內容是對不肯給承諾的前任說分手後過得更好，並不是在祝福新人。",g:["分手"]},
+{t:"APT.",a:"ROSÉ & Bruno Mars",l:"英文",r:"現在很流行，但歌曲以韓國的飲酒遊戲為題，還帶有約人到住處的暗示。",g:["酒醉", "性暗示"]},
+{t:"癡情的男子漢",a:"玖壹壹",l:"台語",r:"有新人放進迎賓歌單，但歌詞有明顯的性暗示，還拿前女友多到坐滿遊覽車開玩笑，不適合長輩在場的婚宴。",g:["性暗示"]},
+{t:"流浪到淡水",a:"金門王 & 李炳輝",l:"台語",r:"副歌「乎乾啦」常被拿來帶舉杯，但主歌唱的是流浪他鄉、想起故鄉的愛人、要把她忘掉，底色是失戀和漂泊。",g:["分手"]},
+{t:"酒後的心聲",a:"江蕙",l:"台語",r:"喜宴 KTV 常點，但內容是被負心、借酒澆愁，還有想醉死的字句。",g:["劈腿", "酒醉"]},
+{t:"追追追",a:"黃妃",l:"台語",r:"節奏很熱鬧，容易被選來炒氣氛，但歌詞是追不到人的煩亂和心碎。",g:["單戀"]},
+{t:"愛你一兆年",a:"旺福",l:"華語",r:"婚禮歌單把它和《俗女養成記 2》台語插曲列在一起，但這首主要是華語，不是台語。",g:["語言不符"]},
+{t:"366日",a:"HY",l:"日文",r:"描寫分手後仍無法忘懷對方的單戀，常被誤選為婚禮情歌。",g:["分手", "單戀"]},
+{t:"ドライフラワー",a:"優里",l:"日文",r:"以分手後的回憶為主題，描寫已結束的戀情。",g:["分手"]},
+{t:"夜に駆ける",a:"YOASOBI",l:"日文",r:"原作小說的主題是殉情、自殺，旋律輕快容易被誤用。",g:["死亡意象"]},
+{t:"奏（かなで）",a:"スキマスイッチ",l:"日文",r:"描寫在車站送別戀人、各自前往不同未來的離別場景。",g:["離別", "放手"]},
+{t:"ハッピーエンド",a:"back number",l:"日文",r:"歌名看似喜氣，實際上是女方強忍淚水笑著與戀人分手。",g:["分手"]},
+{t:"瞳をとじて",a:"平井堅",l:"日文",r:"思念已逝戀人的歌曲，是電影《在世界中心呼喊愛》的主題曲。",g:["悼念"]},
+{t:"너를 위해",a:"임재범（林宰範）",l:"韓文",r:"常被當成浪漫情歌推薦，但歌詞其實在講一段讓彼此受傷、痛苦的愛情。",g:["感情受傷"]},
+{t:"TT",a:"TWICE",l:"韓文",r:"台灣婚禮歌單常列入，但歌詞是暗戀對方、對方卻不懂自己心意的懊惱。",g:["單戀"]},
+{t:"썸 탈꺼야 (Some)",a:"볼빨간사춘기（臉紅的思春期）",l:"韓文",r:"被推薦用於二進、抽捧花，但歌詞描寫的是曖昧、還沒確定關係的狀態，不適合婚禮主題。",g:["曖昧"]},
+{t:"Way Back Home",a:"SHAUN（숀）",l:"韓文",r:"被推薦為進場與用餐歌曲，但歌詞是放不下已經離開的戀人、反覆想回到對方身邊。",g:["分手"]}
 ];
 
 const SOURCES=[
@@ -526,7 +655,11 @@ function songOf(k){
   if(typeof k==="string"&&k.startsWith("c:")){try{const [t,a]=JSON.parse(k.slice(2));if(typeof t==="string"&&t.trim()&&typeof a==="string")return {t,a,l:"自訂",custom:true}}catch(e){}}
   return null;
 }
-const state={scene:null,lang:null,kind:null,picked:false,q:""};
+const state={scene:null,lang:null,era:null,view:"all",q:""};
+/* decade buckets; songs without a confirmed release year fall under 年代不詳 */
+const ERAS=[["70","70年代以前"],["80","80年代"],["90","90年代"],["00","2000年代"],["10","2010年代"],["20","2020年代"],["?","年代不詳"]];
+const ERA_LABEL=Object.fromEntries(ERAS);
+function eraOf(s){if(!s.y)return "?";if(s.y<1980)return "70";const d=Math.floor(s.y/10)*10;return d<2000?String(d%100):String(d%100).padStart(2,"0")}
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
 const ytUrl=(t,a)=>"https://www.youtube.com/results?search_query="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
 function ytLink(t,a,short){const x=el("a","yt"+(short?" yt-s":""));x.href=ytUrl(t,a);x.target="_blank";x.rel="noopener";
@@ -730,15 +863,16 @@ function chipGroup(id,items,field,label){const g=document.getElementById(id).que
     c.onclick=()=>{state[field]=state[field]===v?null:v;render()};g.append(c)})}
 chipGroup("scenes",STAGES.map(c=>c.k),"scene",stageName);
 chipGroup("langs",LANGS.map(x=>x.k),"lang");
-chipGroup("kinds",["經典","近年流行"],"kind");
-document.getElementById("onlyPicked").onclick=()=>{state.picked=!state.picked;render()};
+chipGroup("eras",ERAS.map(e=>e[0]).filter(k=>SONGS.some(s=>eraOf(s)===k)),"era",k=>ERA_LABEL[k]);
+document.querySelectorAll("#viewSeg button").forEach(b=>b.onclick=()=>{state.view=b.dataset.v;render()});
 document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value.trim().toLowerCase();render()});
 
 function match(s,ignoreScene){
   if(!ignoreScene&&state.scene&&!s.s.includes(state.scene))return false;
   if(state.lang&&s.l!==state.lang)return false;
-  if(state.kind&&s.st!==state.kind)return false;
-  if(state.picked&&!where(key(s)))return false;
+  if(state.era&&eraOf(s)!==state.era)return false;
+  if(state.view==="in"&&!where(key(s)))return false;
+  if(state.view==="out"&&where(key(s)))return false;
   if(state.q){const h=[s.t,s.z,s.a,s.m,s.w].join(" ").toLowerCase();if(!h.includes(state.q))return false}
   return true;
 }
@@ -760,14 +894,18 @@ function card(s){
   const ar=el("div","artist",s.a);if(s.y)ar.append(" ",el("span",null,"· "+s.y));left.append(ar);
   const grip=el("span","grip","⠿");grip.title="拖曳到右邊的歌單";grip.setAttribute("aria-hidden","true");
   h.append(left,grip);c.append(h);
+  /* row 1: fixed facts (language, period, tempo) so it never wraps; row 2: the stages, which vary in count */
   const meta=el("div","meta");
-  meta.append(el("span","lang "+LC[s.l],s.l));
-  s.s.forEach(x=>meta.append(el("span","scene",stageName(x))));
-  meta.append(el("span","status",s.st));
+  meta.append(el("span","lang "+LC[s.l],s.l),el("span","status",ERA_LABEL[eraOf(s)]));
   const tp=el("span","tempo");tp.title="節奏："+s.p;const lv={"慢":1,"中":2,"快":3}[s.p];
   for(let i=1;i<=3;i++){const d=el("i",i<=lv?"on":"");d.style.height=(6+i*3)+"px";tp.append(d)}
-  tp.append(" "+s.p);meta.append(tp);c.append(meta);
-  c.append(el("p","sum",s.m),el("p","why",s.w));
+  tp.append(" "+s.p);meta.append(tp);
+  const stages=el("div","meta stages");s.s.forEach(x=>stages.append(el("span","scene",stageName(x))));
+  c.append(meta,stages);
+  const why=el("p","why",s.w);
+  if(s.src){let host="";try{host=new URL(s.src).hostname.replace(/^www\./,"")}catch(_){}
+    const ln=el("a","src-link","來源："+host);ln.href=s.src;ln.target="_blank";ln.rel="noopener";why.append(" ",ln)}
+  c.append(el("p","sum",s.m),why);
   if(s.c)c.append(el("p","caution","提醒："+s.c));
   const act=el("div","act");act.append(kkLink(s.t,s.a),ytLink(s.t,s.a),placeSelect(k,"把 "+s.t+" 加入歌單"));
   if(cur){const inn=el("span","in","已在「"+(cur==="候選"?"候選":cur+" "+COLBY[cur].n)+"」");const who=pickerOf(k);
@@ -802,15 +940,16 @@ function renderBoard(){
 function render(){
   document.querySelectorAll("#scenes .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.scene)));
   document.querySelectorAll("#langs .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.lang)));
-  document.querySelectorAll("#kinds .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.kind)));
-  document.getElementById("onlyPicked").setAttribute("aria-pressed",String(state.picked));
+  document.querySelectorAll("#eras .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.era)));
+  document.querySelectorAll("#viewSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===state.view)));
+  document.getElementById("segIn").textContent=SONGS.filter(s=>where(key(s))).length;
   const list=SONGS.filter(s=>match(s));
   const g=document.getElementById("grid");g.replaceChildren();
-  if(!list.length){const em=el("div","empty",state.picked?"歌單裡還沒有歌。把歌曲卡片拖到歌單，或用卡片下方的選單加入。":"沒有符合條件的歌，試著放寬篩選。");
-    if(!state.picked&&state.q){const q=document.getElementById("q").value.trim();const b=el("button","chip add-custom","找不到？新增「"+q+"」為自訂歌曲");b.type="button";b.onclick=()=>openCustom(q);em.append(el("br"),b)}
+  if(!list.length){const em=el("div","empty",state.view==="in"?"歌單裡還沒有符合條件的歌。把歌曲卡片拖到歌單，或用卡片下方的選單加入。":state.view==="out"&&!state.q?"符合條件的歌都已經加入歌單了。":"沒有符合條件的歌，試著放寬篩選。");
+    if(state.view!=="in"&&state.q){const q=document.getElementById("q").value.trim();const b=el("button","chip add-custom","找不到？新增「"+q+"」為自訂歌曲");b.type="button";b.onclick=()=>openCustom(q);em.append(el("br"),b)}
     g.append(em)}
   else list.forEach(s=>g.append(card(s)));
-  const parts=[state.scene&&stageName(state.scene),state.lang,state.kind,state.picked?"已加入歌單":null].filter(Boolean);
+  const parts=[state.scene&&stageName(state.scene),state.lang,state.era&&ERA_LABEL[state.era],{in:"已加入",out:"未加入"}[state.view]].filter(Boolean);
   document.getElementById("count").textContent=(parts.length?parts.join(" · ")+"：":"全部：")+list.length+" 首";
   const tlst=document.getElementById("trapList");tlst.replaceChildren();
   TRAPS.filter(t=>!state.lang||t.l===state.lang).forEach(t=>{
