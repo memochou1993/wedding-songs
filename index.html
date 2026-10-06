@@ -103,6 +103,10 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .yt{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 12px 3px 10px}
 .yt:hover{border-color:var(--hong);color:var(--hong)}
 .yt svg{width:14px;height:14px;fill:var(--hong)}
+.kk-mark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--l-en);color:var(--card);font-size:10px;font-weight:900;line-height:1;font-family:var(--body)}
+.kk:hover{border-color:var(--l-en);color:var(--l-en)}
+.kk.yt-s:hover{background:var(--gold-soft)}
+.trap .act{margin-top:8px}.trap .yt{margin-top:0}
 .trap .yt{margin-top:8px;background:var(--card)}
 .empty{padding:40px 0;color:var(--muted);text-align:center}
 
@@ -125,10 +129,10 @@ footer li{overflow-wrap:anywhere;break-inside:avoid}
 
 
 /* board */
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start;margin-top:20px}
 .main{min-width:0}
 .grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
-.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);max-height:calc(100vh - 92px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;margin-top:14px;box-shadow:var(--shadow)}
+.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);max-height:calc(100vh - 92px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
 .board-h{padding:14px 14px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
 .board-h h2{font-size:18px}
 .board-h h2 span{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
@@ -155,7 +159,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .col-d{font-size:12px;color:var(--muted);flex-basis:100%}
 .col-list{display:flex;flex-direction:column;gap:4px;min-height:28px}
 .col-empty{font-size:12px;color:var(--muted);padding:4px 2px}
-.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
+.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:5px 6px 5px 8px;cursor:grab}
 .pick-tx{display:flex;flex-direction:column;min-width:0;line-height:1.3}
 .pick-t{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick-a{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -472,8 +476,12 @@ const state={scene:null,lang:null,kind:null,picked:false,q:""};
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
 const ytUrl=(t,a)=>"https://www.youtube.com/results?search_query="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
 function ytLink(t,a,short){const x=el("a","yt"+(short?" yt-s":""));x.href=ytUrl(t,a);x.target="_blank";x.rel="noopener";
-  x.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';if(!short)x.append("在 YouTube 搜尋");
+  x.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';if(!short)x.append("YouTube");
   x.setAttribute("aria-label","在 YouTube 搜尋 "+t);x.title="在 YouTube 搜尋";return x}
+const kkUrl=(t,a)=>"https://www.kkbox.com/tw/tc/search?q="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
+function kkLink(t,a,short){const x=el("a","yt kk"+(short?" yt-s":""));x.href=kkUrl(t,a);x.target="_blank";x.rel="noopener";
+  x.append(el("span","kk-mark","K"));if(!short)x.append("KKBOX");
+  x.setAttribute("aria-label","在 KKBOX 搜尋 "+t);x.title="在 KKBOX 搜尋";return x}
 
 /* ---------- board state: shared db when available, this browser otherwise ---------- */
 const emptyBoard=()=>Object.fromEntries(COLS.map(c=>[c.k,[]]));
@@ -519,8 +527,8 @@ async function flush(){
 }
 function applyRemote(cols){if(dirty||writing)return;board=clean(cols);saveLocal();render()}
 function setSync(m){const s=document.getElementById("sync");if(!s)return;
-  const code=boardId?"歌單 #"+boardId.slice(0,4)+" · ":"";
-  s.textContent=code+{local:"歌單只存在這台裝置的瀏覽器",shared:"已儲存，有權限的人打開都看得到",link:"已同步，知道這個網址的人都能一起編輯",saving:"儲存中…",readonly:"你只有檢視權限，變更不會儲存",error:"儲存失敗，稍後再試一次"}[m];
+  s.title=boardId?"歌單代號 "+boardId.slice(0,4):"";
+  s.textContent={local:"歌單只存在這台裝置的瀏覽器",shared:"已儲存，有權限的人打開都看得到",link:"歌單已同步",saving:"儲存中…",readonly:"你只有檢視權限，變更不會儲存",error:"儲存失敗，稍後再試一次"}[m];
   s.dataset.m=m}
 function move(k,col,before){
   COLS.forEach(c=>{board[c.k]=board[c.k].filter(x=>x!==k)});
@@ -588,12 +596,12 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
 function setupCustomCard(){
   const card=document.getElementById("customCard"),ti=document.getElementById("customTitle"),ai=document.getElementById("customArtist"),act=document.getElementById("customAct");
   const val=()=>({t:ti.value.trim(),a:ai.value.trim()});
-  const yt=ytLink("",""),sel=el("select","place");sel.setAttribute("aria-label","把自訂歌曲加入歌單");
+  const yt=ytLink("",""),kk=kkLink("",""),sel=el("select","place");sel.setAttribute("aria-label","把自訂歌曲加入歌單");
   sel.append(new Option("＋ 加入歌單…",""));COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選（未決定）":colLabel(c),c.k)));
-  act.append(yt,sel);
-  const sync=()=>{const v=val();const ok=!!v.t;yt.href=ytUrl(v.t,v.a);yt.classList.toggle("off",!ok);yt.setAttribute("aria-disabled",String(!ok));
+  act.append(yt,kk,sel);
+  const sync=()=>{const v=val();const ok=!!v.t;yt.href=ytUrl(v.t,v.a);kk.href=kkUrl(v.t,v.a);[yt,kk].forEach(x=>{x.classList.toggle("off",!ok);x.setAttribute("aria-disabled",String(!ok))});
     sel.disabled=!ok;card.draggable=ok;card.classList.toggle("ready",ok)};
-  yt.addEventListener("click",e=>{if(!val().t)e.preventDefault()});
+  [yt,kk].forEach(x=>x.addEventListener("click",e=>{if(!val().t)e.preventDefault()}));
   const reset=()=>{ti.value="";ai.value="";sel.value="";sync()};
   sel.onchange=()=>{const v=val();if(!v.t||!sel.value)return;move(customKey(v.t,v.a),sel.value);reset()};
   [ti,ai].forEach(i=>i.addEventListener("input",sync));
@@ -676,7 +684,7 @@ function card(s){
   tp.append(" "+s.p);meta.append(tp);c.append(meta);
   c.append(el("p","sum",s.m),el("p","why",s.w));
   if(s.c)c.append(el("p","caution","提醒："+s.c));
-  const act=el("div","act");act.append(ytLink(s.t,s.a),placeSelect(k,"把 "+s.t+" 加入歌單"));
+  const act=el("div","act");act.append(ytLink(s.t,s.a),kkLink(s.t,s.a),placeSelect(k,"把 "+s.t+" 加入歌單"));
   if(cur)act.append(el("span","in","已在「"+(cur==="候選"?"候選":cur+" "+COLBY[cur].n)+"」"));
   c.append(act);
   return c;
@@ -699,7 +707,7 @@ function renderBoard(){
       const tx=el("div","pick-tx");tx.append(el("span","pick-t",s.t),el("span","pick-a",s.a.replace(/（[^）]*）/g,"")));
       const lg=el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
       const rm=el("button","rm","×");rm.type="button";rm.setAttribute("aria-label","從歌單移除 "+s.t);rm.onclick=()=>move(k,null);
-      p.append(lg,tx,ytLink(s.t,s.a,true),rm);ul.append(p)});
+      p.append(lg,tx,ytLink(s.t,s.a,true),kkLink(s.t,s.a,true),rm);ul.append(p)});
     if(!board[c.k].length)ul.append(el("div","col-empty","拖曳歌曲到這裡"));
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
   });
@@ -734,7 +742,7 @@ function render(){
   TRAPS.filter(t=>!state.lang||t.l===state.lang).forEach(t=>{
     const d=el("div","trap");d.append(el("h3",null,t.t),el("div","artist",t.a));
     const m=el("div","meta");m.append(el("span","lang "+(LC[t.l]||""),t.l));(t.g||[]).forEach(x=>m.append(el("span","flag",x)));d.append(m);
-    d.append(el("p",null,t.r),ytLink(t.t,t.a));tlst.append(d);
+    const ml=el("div","act");ml.append(ytLink(t.t,t.a),kkLink(t.t,t.a));d.append(el("p",null,t.r),ml);tlst.append(d);
   });
   renderBoard();
 }
