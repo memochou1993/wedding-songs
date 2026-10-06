@@ -895,7 +895,7 @@ function likeBtn(k,title){
   b.onclick=e=>{e.stopPropagation();toggleLike(k);b.replaceWith(likeBtn(k,title))};return b}
 /* cards: [picker avatar] name挑選 ♥[liker], pushed to the end of the action row */
 function whoGroup(k,title){const g=el("span","who"),n=pickerOf(k);
-  if(n){const a=avatar(n,"picker");a.setAttribute("aria-hidden","true");g.append(a,el("span","who-n",n+"挑選"))}
+  if(n){const a=avatar(n,"picker");a.setAttribute("aria-hidden","true");g.append(a,el("span","who-n","由"+n+"挑選"))}
   g.append(likeBtn(k,title));return g}
 setSync("local");
 /* share: the board id is already in the URL, so sharing is sending this address */
