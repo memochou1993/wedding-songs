@@ -5,7 +5,7 @@
 <style>
 /* Layout: header, then song column (custom card, filter bar, card grid) beside the sticky playlist board; trap songs set apart at the end like a fine-print notice on a 喜帖. */
 :root{
-  --paper:#f7f6f3; --card:#ffffff; --ink:#1f1b24; --muted:#6b6470; --line:#e4dfe3; --hover:#f2eff1;
+  --paper:#f7f6f3; --card:#ffffff; --ink:#1f1b24; --muted:#6b6470; --line:#e4dfe3; --hover:#f2eff1;  /* hover and selected fills: a step off the card, darker in light mode and lighter in dark */
   --hong:#b3202f;  --hong-soft:#f6e4e5; --gold:#9a7428; --gold-soft:#f3ecdc;
   --warn:#8a5a00; --warn-soft:#fbf1d9; --no:#8f1d29; --no-soft:#f8e3e5;
   --l-en:#2f5d8a; --l-tw:#2e7a55; --l-jp:#b8571c; --l-kr:#5a4aa3; --on-hong:#ffffff; --tag:#ebe6ec; --tag-ink:#3d3542; --dash:#b3a9b2; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6470' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -70,7 +70,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .pick-row .pick-t{min-width:0}
 .ai-badge{display:inline-block;flex:none;font-size:11px;font-weight:700;border-radius:3px;padding:0 6px;line-height:18px;white-space:nowrap}
 .ai-badge.wait{color:var(--l-en);background:color-mix(in srgb,var(--l-en) 16%,transparent);animation:aiPulse 1.4s ease-in-out infinite}
-.ai-badge.muted{color:var(--muted);background:var(--paper)}
+.ai-badge.muted{color:var(--muted);background:var(--hover)}
 .ai-badge.ok{color:var(--l-tw);background:color-mix(in srgb,var(--l-tw) 14%,transparent)}
 .ai-badge.warn{color:var(--warn);background:var(--warn-soft)}
 .ai-badge.no{color:var(--no);background:var(--no-soft)}
@@ -306,7 +306,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
     padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px))}
   .tabbar button{flex:1;appearance:none;border:0;background:transparent;font:inherit;font-size:14px;font-weight:700;color:var(--muted);
     display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 0;border-radius:10px;cursor:pointer;font-variant-numeric:tabular-nums}
-  .tabbar button[aria-pressed="true"]{color:var(--ink);background:var(--paper)}
+  .tabbar button[aria-pressed="true"]{color:var(--ink);background:var(--hover)}
   .tab-ico{width:18px;height:18px;flex:none;fill:currentColor;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
   .tab-ico circle{stroke:none}
   .toast{display:block;position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:31;
