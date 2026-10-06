@@ -9,6 +9,9 @@
   --hong:#b3202f;  --hong-soft:#f6e4e5; --gold:#9a7428; --gold-soft:#f3ecdc;
   --warn:#8a5a00; --warn-soft:#fbf1d9; --no:#8f1d29; --no-soft:#f8e3e5;
   --l-en:#2f5d8a; --l-tw:#2e7a55; --l-jp:#b8571c; --l-kr:#5a4aa3; --on-hong:#ffffff; --tag:#ebe6ec; --tag-ink:#3d3542; --dash:#b3a9b2; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6470' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  /* people: vivid avatar colours, the same in both themes; --av-ink is the dark initial on the light ones */
+  --av-red:#f03a47; --av-orange:#ff8a00; --av-yellow:#ffc800; --av-lime:#7ed321; --av-green:#12b76a;
+  --av-cyan:#00b8d9; --av-blue:#2970ff; --av-violet:#7a5af8; --av-magenta:#d444f1; --av-pink:#ff4d94; --av-ink:#1a1016;
   --display:"Noto Serif TC","Songti TC","PMingLiU",serif;
   --body:"Noto Sans TC","PingFang TC","Hiragino Sans","Apple SD Gothic Neo","Microsoft JhengHei",system-ui,sans-serif;
   --shadow:0 1px 2px rgba(40,20,30,.06);
@@ -902,13 +905,25 @@ function setupNickname(){
   form.addEventListener("submit",e=>{e.preventDefault();const v=inp.value.trim().slice(0,20);if(!v)return;
     const old=nickname;nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}
     if(old&&old!==v&&renameIn(board,old,v))persist();
-    dlg.close();trackMe();renderPeople();render()});
+    dlg.close();trackMe();render()});
   if(!nickname)openNickname();
 }
 /* avatars: first character on a colour derived from the nickname, so each person keeps one colour */
-const AVATAR_COLORS=["--hong","--l-en","--l-tw","--l-jp","--l-kr","--gold"];
-function colorOf(n){let h=0;for(const ch of n)h=(h*31+ch.codePointAt(0))>>>0;return "var("+AVATAR_COLORS[h%AVATAR_COLORS.length]+")"}
-function avatar(n,cls){const a=el("span","avatar"+(cls?" "+cls:""),[...n][0]||"?");a.style.background=colorOf(n);return a}
+/* each person keeps a colour from their name, but on a board the first ten people never share one:
+   in order of first pick or like, a taken colour moves on to the next free one. The board data decides the order, so every viewer agrees. */
+const AVATAR_COLORS=["--av-red","--av-orange","--av-yellow","--av-lime","--av-green","--av-cyan","--av-blue","--av-violet","--av-magenta","--av-pink"];
+const AVATAR_WHITE=new Set(["--av-blue","--av-violet"]);  // the rest read better with a dark initial
+let colorMap=null;  // name → index, rebuilt on each render
+function hashIdx(n){let h=0;for(const ch of n)h=(h*31+ch.codePointAt(0))>>>0;return h%AVATAR_COLORS.length}
+function assignColor(map,n){const used=new Set(Object.values(map)),L=AVATAR_COLORS.length;let i=hashIdx(n);
+  if(used.size<L)while(used.has(i))i=(i+1)%L;map[n]=i}
+function buildColorMap(){const first={},see=(n,t)=>{if(n&&!(t>=first[n]))first[n]=t};
+  Object.values(board._by).forEach(v=>see(v.n,v.t||0));
+  Object.values(board._like).forEach(m=>Object.keys(m).forEach(n=>{if(m[n]>0)see(n,m[n])}));
+  const map={};Object.keys(first).sort((a,b)=>first[a]-first[b]||(a<b?-1:1)).forEach(n=>assignColor(map,n));return map}
+function colorOf(n){if(!colorMap)colorMap=buildColorMap();if(!(n in colorMap))assignColor(colorMap,n);return AVATAR_COLORS[colorMap[n]]}
+function avatar(n,cls){const a=el("span","avatar"+(cls?" "+cls:""),[...n][0]||"?"),c=colorOf(n);
+  a.style.background="var("+c+")";a.style.color=AVATAR_WHITE.has(c)?"#fff":"var(--av-ink)";return a}
 /* presence: who has this board open right now (Supabase realtime presence) */
 let presenceChan=null;
 const CLIENT_ID=Math.random().toString(36).slice(2,10);
@@ -1254,6 +1269,7 @@ function renderBoard(){
 }
 
 function render(){
+  colorMap=null;renderPeople();  // header avatars share the board's colour assignment
   if(boardId&&!lookTimer&&!lookBusy)lookTimer=setTimeout(pollLookups,300);
   document.querySelectorAll("#scenes .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.scene)));
   document.querySelectorAll("#langs .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.lang)));
