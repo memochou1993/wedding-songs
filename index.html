@@ -173,7 +173,7 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .yt svg{width:14px;height:14px;fill:var(--hong)}
 .kk-mark{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--l-en);color:var(--card);font-size:10px;font-weight:900;line-height:1;font-family:var(--body)}
 .kk:hover{border-color:var(--l-en);color:var(--l-en)}
-.trap .act{margin-top:8px}.trap .yt{margin-top:0}
+.trap .act-links{margin-top:8px}.trap .yt{margin-top:0}
 .trap .yt{margin-top:8px;background:var(--card)}
 .empty{padding:40px 0;color:var(--muted);text-align:center;grid-column:1/-1}
 
@@ -254,7 +254,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .like .like-badge.more{background:var(--hong);color:var(--on-hong);font-variant-numeric:tabular-nums}
 /* empty slots keep their width so the avatars line up down the column */
 .like-ph{width:28px}.picker-ph{width:20px}
-.who{display:inline-flex;align-items:center;gap:6px;margin-left:auto;min-width:0}
+.who{display:flex;align-items:center;gap:6px;min-width:0}
 .who-n{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .avatar.picker{width:20px;height:20px;font-size:11px;margin:0;border:0;align-self:center}
 .row-more{appearance:none;border:0;background:transparent;color:var(--muted);width:28px;height:28px;padding:0;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;align-self:center}
@@ -285,10 +285,10 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .song{cursor:grab}
 .song.placed{border-color:color-mix(in srgb,var(--gold) 75%,var(--card))}
 .grip{color:var(--muted);font-size:18px;line-height:1;padding-top:2px}
-.act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:auto}
-.act .yt{align-self:auto}
-/* links on the first line, the add-to-playlist select always starts the second */
-.act-break{flex-basis:100%;height:0}
+/* card actions, stacked at the card's own 10px rhythm: listen links, the stage select, then who picked it */
+.act{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:auto}
+.act-links{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.act-links .yt{align-self:auto}
 .place{appearance:none;-webkit-appearance:none;font:inherit;font-size:13px;color:var(--ink);background:var(--card) var(--chev) no-repeat right 12px center/12px 12px;border:1px solid var(--line);border-radius:999px;padding:4px 32px 4px 12px;max-width:100%;cursor:pointer}
 .place:hover{border-color:var(--ink)}
 .in{font-size:12px;color:var(--gold);font-weight:700}
@@ -924,7 +924,7 @@ function likeBtn(k,title){
   b.setAttribute("aria-label",(mine?"收回對 ":"喜歡 ")+title+" 的讚");b.title=likers.length?likers.join("、")+"喜歡":"喜歡這首";
   b.append(el("span","heart",mine?"♥":"♡"));who(b);
   b.onclick=e=>{e.stopPropagation();toggleLike(k);b.replaceWith(likeBtn(k,title))};return b}
-/* cards: [picker avatar] name挑選 ♥[liker], pushed to the end of the action row */
+/* cards: [picker avatar] 由…挑選 ♥[liker], on a line under the stage select */
 function whoGroup(k,title){const g=el("span","who"),n=pickerOf(k);
   if(n){const a=avatar(n,"picker");a.setAttribute("aria-hidden","true");g.append(a,el("span","who-n","由"+n+"挑選"))}
   g.append(likeBtn(k,title));return g}
@@ -1159,9 +1159,9 @@ function openAi(s,k){
       const chip=srcChip(u);if(dup)chip.firstChild.textContent=n+" "+seen[n];list.append(chip)});fact("來源",list)}
   if(facts.children.length)c.append(facts);
   body.append(c);
-  const act=el("div","act");act.append(kkLink(x.title||s.t,x.artist||s.a||"",kkOf(s)),ytLink(x.title||s.t,x.artist||s.a||""));
+  const act=el("div","act"),lk=el("div","act-links");lk.append(kkLink(x.title||s.t,x.artist||s.a||"",kkOf(s)),ytLink(x.title||s.t,x.artist||s.a||""));act.append(lk);
   if(k){const sel=placeSelect(k,"把 "+(x.title||s.t)+" 移到其他階段");
-    sel.addEventListener("change",()=>{if(where(k))openAi(s,k);else document.getElementById("aiDlg").close()});act.append(el("span","act-break"),sel);
+    sel.addEventListener("change",()=>{if(where(k))openAi(s,k);else document.getElementById("aiDlg").close()});act.append(sel);
     if(where(k))act.append(whoGroup(k,x.title||s.t))}
   c.append(act);
   if(k&&x.is_landmine&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
@@ -1281,7 +1281,7 @@ function card(s){
   c.append(el("p","sum",s.m),why);
   if(s.c)c.append(el("p","caution","提醒："+s.c));
   if(s.src){const row=el("div","src-row");row.append(el("span","src-lbl","來源"),srcChip(s.src));c.append(row)}
-  const act=el("div","act");act.append(kkLink(s.t,s.a,s.kk),ytLink(s.t,s.a),el("span","act-break"),placeSelect(k,"把 "+s.t+" 加入歌單"));
+  const act=el("div","act"),lk=el("div","act-links");lk.append(kkLink(s.t,s.a,s.kk),ytLink(s.t,s.a));act.append(lk,placeSelect(k,"把 "+s.t+" 加入歌單"));
   /* the select already shows the stage, so only say who picked it */
   if(cur)act.append(whoGroup(k,s.t));
   c.append(act);
@@ -1372,7 +1372,7 @@ function render(){
   TRAPS.filter(t=>!state.lang||t.l===state.lang).forEach(t=>{
     const d=el("div","trap");d.append(el("h3",null,t.t),el("div","artist",t.a));
     const m=el("div","meta");m.append(langChip(t.l));(t.g||[]).forEach(x=>m.append(el("span","flag",x)));d.append(m);
-    const ml=el("div","act");ml.append(kkLink(t.t,t.a,t.kk),ytLink(t.t,t.a));d.append(el("p",null,t.r),ml);tlst.append(d);
+    const ml=el("div","act-links");ml.append(kkLink(t.t,t.a,t.kk),ytLink(t.t,t.a));d.append(el("p",null,t.r),ml);tlst.append(d);
   });
   renderBoard();
 }
