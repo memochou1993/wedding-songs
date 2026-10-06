@@ -313,6 +313,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
   .wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   .tabbar{display:flex;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);
     padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px))}
+  /* the bar's fill carries on below it, so nothing scrolls into view under it (iOS toolbar area, overscroll bounce) */
+  .tabbar::after{content:"";position:absolute;left:0;right:0;top:100%;height:100vh;background:var(--card)}
   .tabbar button{flex:1;appearance:none;border:0;background:transparent;font:inherit;font-size:14px;font-weight:700;color:var(--muted);
     display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 0;border-radius:10px;cursor:pointer;font-variant-numeric:tabular-nums}
   .tabbar button[aria-pressed="true"]{color:var(--ink);background:var(--hover)}
