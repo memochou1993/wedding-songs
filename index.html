@@ -89,6 +89,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .ai-dlg h2{padding:16px 16px 0}
 .ai-dlg #aiBody>.why{padding:0 16px}
 .ai-dlg .trap{margin:0}
+.ai-note{margin-top:16px!important;color:var(--warn)!important}
 .ai-lbl{font-size:12px;color:var(--muted);margin-right:2px}
 .ai-facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:2px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:13px}
 .ai-facts dt{color:var(--muted);white-space:nowrap;text-align:right}
@@ -1010,7 +1011,8 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
 /* ---------- AI lookup for custom songs: runs in the background, cached server-side ---------- */
 const LOOK={};
 const lookupQuery=s=>(s.t+" "+(s.a||"")).trim();
-const aiSong=s=>{const r=LOOK[lookupQuery(s)];const x=r&&r.status==="done"&&r.output&&Array.isArray(r.output.songs)?r.output.songs[0]:null;return x||null};
+/* the workflow answers with {song}; results cached before it changed have {songs:[…]} */
+const aiSong=s=>{const r=LOOK[lookupQuery(s)],o=r&&r.status==="done"&&r.output;return o&&(o.song||(Array.isArray(o.songs)?o.songs[0]:null))||null};
 const VERDICT={recommended:["推薦","ok"],acceptable:["可用","ok"],caution:["斟酌","warn"],avoid:["不建議","no"]};
 const REASON={sexual_innuendo:"性暗示",unrequited_love:"單戀",breakup:"分手",infidelity:"劈腿",parting:"離別",death:"悼念",resentment:"怨懟",anti_marriage:"反婚姻",impulsive:"衝動",other:"其他"};
 const TEMPO={fast:"快",medium:"中",slow:"慢"};
@@ -1018,23 +1020,25 @@ const lowConf=x=>x.confidence==="low"||x.lyrics_source_index===0;
 function aiScenes(x){if(x.is_landmine)return[];let sc=(x.suggested_scenes||[]).filter(k=>COLBY[k]&&k!=="候選");
   if(x.wedding_verdict==="caution")sc=sc.filter(k=>!["03","04","05"].includes(k));return sc}
 let lookTimer=null,lookBusy=false;
+const REFRESH=new Set();  // queries to look up again on the next poll, ignoring the cached result
+let aiShown=null;  // the custom song open in the dialog, so a finished lookup can redraw it
 async function pollLookups(){
   lookTimer=null;
   if(!boardId||!window.supabase||lookBusy)return;
-  const qs=[...new Set(COLS.flatMap(c=>board[c.k]).map(songOf).filter(s=>s&&s.custom).map(lookupQuery))]
-    .filter(q=>{const r=LOOK[q];return !r||r.status==="running"||r.status==="pending"});
+  const songs={};COLS.flatMap(c=>board[c.k]).map(songOf).filter(s=>s&&s.custom).forEach(s=>{songs[lookupQuery(s)]={title:s.t,artist:s.a||""}});
+  const qs=Object.keys(songs).filter(q=>{const r=LOOK[q];return !r||r.status==="running"||r.status==="pending"});
   if(!qs.length)return;
   lookBusy=true;let more=true;
   try{
     const res=await fetch(SB_URL+"/functions/v1/song-lookup",{method:"POST",
-      headers:{"content-type":"application/json",apikey:SB_KEY,"x-board-id":boardId},body:JSON.stringify({queries:qs})});
-    if(res.ok){const {results}=await res.json();let changed=false;
+      headers:{"content-type":"application/json",apikey:SB_KEY,"x-board-id":boardId},body:JSON.stringify({queries:qs,songs:Object.fromEntries(qs.map(q=>[q,songs[q]])),refresh:qs.filter(q=>REFRESH.has(q))})});
+    if(res.ok){qs.forEach(q=>REFRESH.delete(q));const {results}=await res.json();let changed=false;
       Object.entries(results||{}).forEach(([q,r])=>{if(!LOOK[q]||LOOK[q].status!==r.status)changed=true;LOOK[q]=r});
       more=Object.values(results||{}).some(r=>r.status==="running"||r.status==="pending");
-      if(changed)render()}
+      if(changed){render();if(aiShown&&document.getElementById("aiDlg").open)openAi(aiShown.s,aiShown.k)}}
   }catch(e){}
   lookBusy=false;
-  if(more&&!lookTimer)lookTimer=setTimeout(pollLookups,4000);
+  if((more||REFRESH.size)&&!lookTimer)lookTimer=setTimeout(pollLookups,REFRESH.size?0:4000);
 }
 function aiBadge(s){
   /* short label on the board; the full result is in the dialog */
@@ -1048,11 +1052,23 @@ function aiBadge(s){
   const low=lowConf(x);
   return b(label,cls,"AI 判斷："+(VERDICT[x.wedding_verdict]||["已查詢"])[0]+(low?"（找不到足夠的歌詞說明，僅供參考）":"")+"。點歌名看詳細結果");
 }
+/* 重新檢測: look the song up again and close the dialog; the board badge shows 檢測中 until the new result is in */
+function addRecheck(s,k,r){
+  if(!boardId||!window.supabase||!r||r.status==="running"||r.status==="pending")return;
+  const q=lookupQuery(s),bt=el("button","chip re-ai","重新檢測");bt.type="button";
+  bt.title="忽略目前的結果，請 AI 重新檢測這首歌";
+  bt.onclick=()=>{LOOK[q]={status:"running"};REFRESH.add(q);document.getElementById("aiDlg").close();render();toast("重新檢測中");
+    if(!lookBusy){clearTimeout(lookTimer);pollLookups()}};
+  document.querySelector("#aiDlg .dlg-actions .share-btn").before(bt);
+  const note={limited:"今天的 AI 查詢次數已達上限，先顯示原本的結果。",error:"重新檢測失敗，先顯示原本的結果，稍後再試一次。"}[r.refused];
+  if(note)document.getElementById("aiBody").append(el("p","why ai-note",note));  // the dialog fills in below it
+}
 function openAi(s,k){
   /* the result is laid out with the same card() as the song list, minus the board controls */
   const r=LOOK[lookupQuery(s)],x=aiSong(s),body=document.getElementById("aiBody"),links=document.getElementById("aiLinks");
-  body.replaceChildren();links.replaceChildren();
-  document.querySelectorAll("#aiDlg .move-x").forEach(e=>e.remove());
+  body.replaceChildren();links.replaceChildren();aiShown={s,k};
+  document.querySelectorAll("#aiDlg .move-x,#aiDlg .re-ai").forEach(e=>e.remove());
+  addRecheck(s,k,r);
   if(!x){const h=el("h2",null,s.t);h.id="aiTitle";body.append(h,el("p","why",!r||r.status==="running"||r.status==="pending"?"AI 正在檢測這首歌，大約需要半分鐘，好了會自動更新。":r.status==="limited"?"這份歌單今天的 AI 查詢次數已達上限，明天再試。":r.status==="failed"?"AI 查詢失敗。":"AI 查不到這首歌，可能是歌名或歌手有誤。"));
     links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));{const d=document.getElementById("aiDlg");if(!d.open)d.showModal()}return}
   const low=lowConf(x);
@@ -1099,7 +1115,7 @@ function openSong(s,k){
   if(s.custom)return openAi(s,k);
   const body=document.getElementById("aiBody"),links=document.getElementById("aiLinks");
   body.replaceChildren();links.replaceChildren();
-  document.querySelectorAll("#aiDlg .move-x").forEach(e=>e.remove());
+  document.querySelectorAll("#aiDlg .move-x,#aiDlg .re-ai").forEach(e=>e.remove());aiShown=null;
   let c;
   if(s.trap){
     c=el("article","song");const h=el("h3",null,s.t);c.append(h,el("div","artist",s.a));

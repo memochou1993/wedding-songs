@@ -1,9 +1,13 @@
 // song-lookup: runs the wedding-song-screener workflow for custom songs, in the background.
 //
-// POST { queries: string[] } with header x-board-id
-//   → { results: { [query]: { status, output?, error? } } }
+// POST { queries: string[], songs?: { [query]: { title, artist } }, refresh?: string[] } with header x-board-id
+//   → { results: { [query]: { status, output?, error?, refused? } } }
 //
 // status: running | done | failed | pending (board not saved yet, retry later) | limited (daily cap hit)
+// refresh: queries (also listed in queries) to look up again, ignoring the cached result. A re-check counts
+// toward the daily caps; over them, the old result comes back with refused: "limited".
+// songs: the title and artist behind each query, which the workflow takes separately. A query without
+// one (older pages) is sent as the title alone, and the workflow works out the artist.
 // The browser calls this every few seconds while any of its custom songs is still running.
 // A workflow execution keeps going on the platform even if nobody is polling; the next poll
 // from any viewer of the board picks up the finished result. Results are cached per query in
@@ -32,7 +36,8 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
   auth: { persistSession: false },
 });
 
-type Result = { status: string; output?: unknown; error?: string };
+type Result = { status: string; output?: unknown; error?: string; refused?: string };
+type Song = { title: string; artist: string };
 
 const norm = (q: string) => q.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 
@@ -58,7 +63,7 @@ async function lfe(path: string, body: unknown) {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(25_000),
   });
-  if (!res.ok) throw new Error(`lfe ${path} ${res.status}`);
+  if (!res.ok) throw new Error(`lfe ${path} ${res.status} ${(await res.text()).slice(0, 300)}`);
   return await res.json();
 }
 
@@ -70,13 +75,16 @@ async function countSince(col: string | null, value: string | null) {
   return count ?? 0;
 }
 
-async function start(query: string, key: string, boardId: string): Promise<Result> {
+async function overLimit(boardId: string) {
+  return (await countSince("board_id", boardId)) >= BOARD_DAILY_LIMIT || (await countSince(null, null)) >= GLOBAL_DAILY_LIMIT;
+}
+
+async function start(query: string, key: string, boardId: string, song: Song): Promise<Result> {
   const { data: board } = await db.from("boards").select("id").eq("id", boardId).maybeSingle();
   if (!board) return { status: "pending" };
-  if ((await countSince("board_id", boardId)) >= BOARD_DAILY_LIMIT) return { status: "limited" };
-  if ((await countSince(null, null)) >= GLOBAL_DAILY_LIMIT) return { status: "limited" };
+  if (await overLimit(boardId)) return { status: "limited" };
 
-  const started = await lfe("runtime/start-execution", { workflow_id: WORKFLOW_ID, input: { query } });
+  const started = await lfe("runtime/start-execution", { workflow_id: WORKFLOW_ID, input: song });
   const { error } = await db.from("lookups").insert({
     query_norm: key, query, status: "running", execution_arn: started.execution_arn, board_id: boardId,
   });
@@ -101,10 +109,32 @@ async function poll(key: string, arn: string): Promise<Result> {
   return { status: "failed", error: "查詢失敗" };
 }
 
-async function handle(query: string, boardId: string): Promise<Result> {
+// re-check: run the workflow again over the cached row; created_at moves to now so it counts toward today's caps
+async function restart(query: string, key: string, boardId: string, song: Song, old: Result): Promise<Result> {
+  if (await overLimit(boardId)) return { ...old, refused: "limited" };
+  try {
+    const started = await lfe("runtime/start-execution", { workflow_id: WORKFLOW_ID, input: song });
+    const now = new Date().toISOString();
+    const { error } = await db.from("lookups").update({
+      query, status: "running", execution_arn: started.execution_arn, output: null, error: null,
+      board_id: boardId, created_at: now, updated_at: now,
+    }).eq("query_norm", key);
+    if (error) throw new Error(`update ${error.message}`);
+    return { status: "running" };
+  } catch (e) {
+    // keep the old result rather than pretend it is running
+    console.error("restart", query, e);
+    return { ...old, refused: "error" };
+  }
+}
+
+async function handle(query: string, boardId: string, refresh: boolean, song: Song): Promise<Result> {
   const key = norm(query);
   const { data: row } = await db.from("lookups").select("status, execution_arn, output").eq("query_norm", key).maybeSingle();
-  if (!row) return await start(query, key, boardId);
+  if (!row) return await start(query, key, boardId, song);
+  if (refresh && row.status !== "running") {
+    return await restart(query, key, boardId, song, row.status === "done" ? { status: "done", output: row.output } : { status: "failed", error: "查詢失敗" });
+  }
   if (row.status === "done") return { status: "done", output: row.output };
   if (row.status === "failed") return { status: "failed", error: "查詢失敗" };
   return row.execution_arn ? await poll(key, row.execution_arn) : { status: "running" };
@@ -123,15 +153,23 @@ Deno.serve(async (req) => {
   if (!ID_RE.test(boardId)) return json({ error: "missing board id" }, 400);
   if (!LFE_APP_KEY) return json({ error: "server not configured" }, 500);
 
-  let body: { queries?: unknown };
+  let body: { queries?: unknown; refresh?: unknown; songs?: unknown };
   try { body = await req.json(); } catch { return json({ error: "invalid json" }, 400); }
   const queries = Array.isArray(body.queries)
     ? [...new Set(body.queries.filter((q): q is string => typeof q === "string" && q.trim().length > 0 && q.length <= 200))].slice(0, MAX_QUERIES)
     : [];
+  const given = body.songs && typeof body.songs === "object" ? body.songs as Record<string, unknown> : {};
+  const songOf = (q: string): Song => {
+    const v = given[q] as { title?: unknown; artist?: unknown } | undefined;
+    const title = typeof v?.title === "string" ? v.title.trim().slice(0, 200) : "";
+    const artist = typeof v?.artist === "string" ? v.artist.trim().slice(0, 200) : "";
+    return title ? { title, artist } : { title: q.trim(), artist: "" };
+  };
+  const refresh = new Set(Array.isArray(body.refresh) ? body.refresh.filter((q): q is string => typeof q === "string") : []);
 
   const results: Record<string, Result> = {};
   await Promise.all(queries.map(async (q) => {
-    try { results[q] = await handle(q, boardId); }
+    try { results[q] = await handle(q, boardId, refresh.has(q), songOf(q)); }
     catch (e) { console.error("lookup", q, e); results[q] = { status: "running" }; }
   }));
   return json({ results });
