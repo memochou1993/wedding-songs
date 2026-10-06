@@ -887,13 +887,22 @@ function whoGroup(k,title){const g=el("span","who"),n=pickerOf(k);
 setSync("local");
 /* share: the board id is already in the URL, so sharing is sending this address */
 let openNickname=()=>{};
+/* picks and likes are stored under the nickname, so renaming carries this board's entries over to the new name */
+function renameIn(b,from,to){let changed=false;
+  Object.values(b._by).forEach(v=>{if(v.n===from){v.n=to;changed=true}});
+  Object.values(b._like).forEach(m=>{if(!(from in m))return;
+    if(!(to in m)||Math.abs(m[from])>Math.abs(m[to]))m[to]=m[from];
+    m[from]=-Math.abs(m[from]);changed=true});  // withdraw the old name's like, so merging with an older save can't revive it
+  return changed}
 function setupNickname(){
   if(!boardId)return;
   const dlg=document.getElementById("nickDlg"),form=document.getElementById("nickForm"),inp=document.getElementById("nickInput");
   openNickname=()=>{inp.value=nickname;dlg.showModal();inp.focus()};
   dlg.addEventListener("cancel",e=>{if(!nickname)e.preventDefault()});
   form.addEventListener("submit",e=>{e.preventDefault();const v=inp.value.trim().slice(0,20);if(!v)return;
-    nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}dlg.close();trackMe();renderPeople();render()});
+    const old=nickname;nickname=v;try{localStorage.setItem("wedding-nickname",v)}catch(_){}
+    if(old&&old!==v&&renameIn(board,old,v))persist();
+    dlg.close();trackMe();renderPeople();render()});
   if(!nickname)openNickname();
 }
 /* avatars: first character on a colour derived from the nickname, so each person keeps one colour */
