@@ -79,7 +79,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .ai-dlg form{gap:12px}
 .ai-dlg{padding:0;overflow-x:hidden;overflow-y:auto}
 .ai-dlg form{padding:0 0 16px}
-.ai-dlg .song{border:0;border-radius:0;box-shadow:none}
+.ai-dlg .song{border:0;border-radius:0;box-shadow:none;cursor:default}
 .ai-dlg .dlg-actions{padding:0 16px}
 .ai-dlg h2{padding:16px 16px 0}
 .ai-dlg #aiBody>.why{padding:0 16px}
@@ -194,6 +194,16 @@ footer li{overflow-wrap:anywhere;break-inside:avoid}
 .sync[data-m="error"],.sync[data-m="readonly"]{color:var(--warn)}
 .cols{display:flex;flex-direction:column;gap:8px;padding:10px}
 .col{border:1.5px dashed var(--dash);border-radius:6px;padding:8px;transition:border-color .12s,background .12s}
+.col.excluded{border:1px solid var(--line);border-style:solid;margin-top:8px;background:transparent}
+.col.excluded:not(.open) .col-list{display:none}
+.col.excluded:not(.open) .col-h{margin-bottom:0}
+.col.excluded .col-t{appearance:none;border:0;background:transparent;padding:0;font:inherit;font-family:var(--display);font-weight:700;font-size:15px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.col.excluded .col-t:hover{color:var(--ink)}
+.x-caret{font-size:11px;width:10px}
+.col.excluded .pick{opacity:.75}
+.in.out{color:var(--muted)}
+.move-x{border-color:var(--no);color:var(--no)}
+.move-x:hover{background:var(--no-soft)}
 .col.maybe{border-color:color-mix(in srgb,var(--gold) 75%,var(--card))}
 body.is-dragging .col.maybe:not(.over){border-color:var(--gold)}
 .col.over{border-color:var(--hong);border-style:solid;background:var(--hong-soft)}
@@ -373,6 +383,9 @@ body.is-dragging .col.over{border-color:var(--hong)}
 </div>
 
 <script>
+/* one-character language chips; the full name stays in the tooltip */
+const langShort=l=>l==="華語"?"華":(l||"")[0]||"";
+function langChip(l,cls){const e=el("span","lang "+(cls||"")+" "+(LC[l]||""),langShort(l));e.title=l;return e}
 const LANGS=[{k:"英文",c:"en"},{k:"台語",c:"tw"},{k:"日文",c:"jp"},{k:"韓文",c:"kr"}];
 
 const SONGS=[
@@ -670,11 +683,12 @@ const COLS=[
  {k:"12",n:"頒獎"},
  {k:"A",n:"迎賓音樂",min:10,max:15},
  {k:"B",n:"用餐音樂",min:10,max:15},
- {k:"C",n:"送客音樂",min:5,max:10}
+ {k:"C",n:"送客音樂",min:5,max:10},
+ {k:"X",n:"已排除",d:"查過但不打算用的歌，不算進歌單"}
 ];
-const STAGES=COLS.filter(c=>c.k!=="候選");
+const STAGES=COLS.filter(c=>c.k!=="候選"&&c.k!=="X");
 const stageName=k=>k+" "+COLBY[k].n.replace(/（[^）]*）/g,"");
-const colLabel=c=>c.k==="候選"?"候選":c.k+" "+c.n+(c.min?"（"+c.min+"–"+c.max+" 首）":"");
+const colLabel=c=>c.k==="候選"||c.k==="X"?c.n:c.k+" "+c.n+(c.min?"（"+c.min+"–"+c.max+" 首）":"");
 const COLBY=Object.fromEntries(COLS.map(c=>[c.k,c]));
 /* placements saved under the earlier scene names */
 const OLDCOL={"迎賓":"A","用餐敬酒":"B","送客":"C","二進":"10","成長影片":"00","一進":"候選","感謝父母":"候選"};
@@ -737,6 +751,8 @@ if(boardId){try{const saved=localStorage.getItem(LS_KEY);if(saved)board=clean(JS
 const saveLocal=()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(board))}catch(e){}};
 let remoteSave=null,okMode="local",writing=false,dirty=false,timer=null;
 const where=k=>COLS.find(c=>board[c.k].includes(k))?.k||null;
+/* placed = in the playlist proper; songs in 已排除 (X) don't count */
+const placedIn=k=>{const w=where(k);return w&&w!=="X"?w:null};
 function persist(){
   saveLocal();
   if(!remoteSave)return;
@@ -882,7 +898,7 @@ function aiBadge(s){
   /* short label on the board; the full result is in the dialog */
   const r=LOOK[lookupQuery(s)],x=aiSong(s);
   const b=(t,cls,tip)=>{const e=el("span","ai-badge "+cls,t);e.title=tip;return e};
-  if(!r||r.status==="running"||r.status==="pending")return b("查詢中…","wait","AI 正在查詢這首歌，查好會自動更新");
+  if(!r||r.status==="running"||r.status==="pending")return b("檢測中…","wait","AI 正在檢測這首歌，好了會自動更新");
   if(r.status==="limited")return b("已達上限","muted","這份歌單今天的 AI 查詢次數已達上限");
   if(r.status==="failed")return b("查詢失敗","muted","AI 查詢失敗");
   if(!x)return b("查不到","muted","AI 查不到這首歌");
@@ -890,11 +906,12 @@ function aiBadge(s){
   const low=lowConf(x);
   return b(label+(low?"？":""),cls,"AI 判斷："+(VERDICT[x.wedding_verdict]||["已查詢"])[0]+(low?"（找不到足夠的歌詞說明，僅供參考）":"")+"。點歌名看詳細結果");
 }
-function openAi(s){
+function openAi(s,k){
   /* the result is laid out with the same card() as the song list, minus the board controls */
   const r=LOOK[lookupQuery(s)],x=aiSong(s),body=document.getElementById("aiBody"),links=document.getElementById("aiLinks");
   body.replaceChildren();links.replaceChildren();
-  if(!x){const h=el("h2",null,s.t);h.id="aiTitle";body.append(h,el("p","why",!r||r.status==="running"||r.status==="pending"?"AI 正在查詢這首歌，大約需要半分鐘，查好會自動更新。":r.status==="limited"?"這份歌單今天的 AI 查詢次數已達上限，明天再試。":r.status==="failed"?"AI 查詢失敗。":"AI 查不到這首歌，可能是歌名或歌手有誤。"));
+  document.querySelectorAll("#aiDlg .move-x").forEach(e=>e.remove());
+  if(!x){const h=el("h2",null,s.t);h.id="aiTitle";body.append(h,el("p","why",!r||r.status==="running"||r.status==="pending"?"AI 正在檢測這首歌，大約需要半分鐘，好了會自動更新。":r.status==="limited"?"這份歌單今天的 AI 查詢次數已達上限，明天再試。":r.status==="failed"?"AI 查詢失敗。":"AI 查不到這首歌，可能是歌名或歌手有誤。"));
     links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));document.getElementById("aiDlg").showModal();return}
   const low=lowConf(x);
   const c=card({t:x.title||s.t,z:x.title_zh||"",a:x.artist||s.a||"",y:parseInt(x.release_year,10)||null,l:x.language||"其他",
@@ -925,6 +942,9 @@ function openAi(s){
   if(facts.children.length)c.append(facts);
   body.append(c);
   links.append(kkLink(x.title||s.t,x.artist||s.a||""),ytLink(x.title||s.t,x.artist||s.a||""));
+  if(k&&x.is_landmine&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
+    xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};
+    document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
   document.getElementById("aiDlg").showModal();
 }
 /* ---------- custom song dialog ---------- */
@@ -972,7 +992,8 @@ function chipGroup(id,items,field,label){const g=document.getElementById(id).que
   items.forEach(v=>{const c=el("button","chip",label?label(v):v);c.type="button";c.setAttribute("aria-pressed","false");c.dataset.v=v;
     c.onclick=()=>{state[field]=state[field]===v?null:v;render()};g.append(c)})}
 chipGroup("scenes",STAGES.map(c=>c.k),"scene",stageName);
-chipGroup("langs",LANGS.map(x=>x.k),"lang");
+chipGroup("langs",LANGS.map(x=>x.k),"lang",langShort);
+document.querySelectorAll("#langs .chip").forEach(c=>c.title=c.dataset.v);
 chipGroup("eras",ERAS.map(e=>e[0]).filter(k=>SONGS.some(s=>eraOf(s)===k)),"era",k=>ERA_LABEL[k]);
 document.querySelectorAll("#viewSeg button").forEach(b=>b.onclick=()=>{state.view=b.dataset.v;render()});
 document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value.trim().toLowerCase();render()});
@@ -981,8 +1002,8 @@ function match(s,ignoreScene){
   if(!ignoreScene&&state.scene&&!s.s.includes(state.scene))return false;
   if(state.lang&&s.l!==state.lang)return false;
   if(state.era&&eraOf(s)!==state.era)return false;
-  if(state.view==="in"&&!where(key(s)))return false;
-  if(state.view==="out"&&where(key(s)))return false;
+  if(state.view==="in"&&!placedIn(key(s)))return false;
+  if(state.view==="out"&&placedIn(key(s)))return false;
   if(state.q){const h=[s.t,s.z,s.a,s.m,s.w].join(" ").toLowerCase();if(!h.includes(state.q))return false}
   return true;
 }
@@ -997,7 +1018,7 @@ function placeSelect(k,label){
 }
 function card(s){
   const k=key(s),cur=where(k);
-  const c=el("article","song"+(cur?" placed":""));c.dataset.k=k;makeDraggable(c,k);
+  const c=el("article","song"+(cur&&cur!=="X"?" placed":""));c.dataset.k=k;makeDraggable(c,k);
   const h=el("div","song-h");const left=el("div");
   left.append(el("h3",null,s.t));
   if(s.z&&s.z!==s.t)left.append(el("div","zh",s.z));
@@ -1006,7 +1027,7 @@ function card(s){
   h.append(left,grip);c.append(h);
   /* row 1: fixed facts (language, period, tempo) so it never wraps; row 2: the stages, which vary in count */
   const meta=el("div","meta");
-  meta.append(el("span","lang "+(LC[s.l]||""),s.l),el("span","status",ERA_LABEL[eraOf(s)]));
+  meta.append(langChip(s.l),el("span","status",ERA_LABEL[eraOf(s)]));
   const tp=el("span","tempo");tp.title="節奏："+s.p;const lv={"慢":1,"中":2,"快":3}[s.p];
   for(let i=1;i<=3;i++){const d=el("i",i<=lv?"on":"");d.style.height=(6+i*3)+"px";tp.append(d)}
   tp.append(" "+s.p);meta.append(tp);
@@ -1018,30 +1039,35 @@ function card(s){
   c.append(el("p","sum",s.m),why);
   if(s.c)c.append(el("p","caution","提醒："+s.c));
   const act=el("div","act");act.append(kkLink(s.t,s.a),ytLink(s.t,s.a),placeSelect(k,"把 "+s.t+" 加入歌單"));
-  if(cur){const inn=el("span","in","已在「"+(cur==="候選"?"候選":cur+" "+COLBY[cur].n)+"」");const who=pickerOf(k);
+  if(cur){const inn=el("span","in"+(cur==="X"?" out":""),cur==="X"?"已排除":"已在「"+(cur==="候選"?"候選":cur+" "+COLBY[cur].n)+"」");const who=pickerOf(k);
     if(who){const by=el("span","in-by"," · 由"+who+"挑選");by.style.color=colorOf(who);inn.append(by)}act.append(inn)}
   c.append(act);
   return c;
 }
+let xOpen=false;try{xOpen=!!localStorage.getItem("wedding-x-open")}catch(_){}
 function renderBoard(){
   const wrap=document.getElementById("cols");wrap.replaceChildren();
   let total=0;
   COLS.forEach(c=>{
-    const z=el("div","col"+(c.k==="候選"?" maybe":"")+(board[c.k].length?"":" is-empty"));z.dataset.col=c.k;
+    const isX=c.k==="X";
+    const z=el("div","col"+(c.k==="候選"?" maybe":"")+(isX?" excluded"+(xOpen?" open":""):"")+(board[c.k].length?"":" is-empty"));z.dataset.col=c.k;
     const hd=el("div","col-h");const n=board[c.k].length;
-    const ct=el("span","col-t");if(c.k!=="候選")ct.append(el("span","col-code",c.k));ct.append(c.n);hd.append(ct);
+    const ct=el(isX?"button":"span","col-t");if(isX){ct.type="button";ct.setAttribute("aria-expanded",String(xOpen));
+      ct.onclick=()=>{xOpen=!xOpen;try{localStorage.setItem("wedding-x-open",xOpen?"1":"")}catch(_){}renderBoard()};ct.append(el("span","x-caret",xOpen?"▾":"▸"))}
+    else if(c.k!=="候選")ct.append(el("span","col-code",c.k));
+    ct.append(c.n);hd.append(ct);
     const cn=el("span","col-n",c.min?n+" / "+c.min+"–"+c.max+" 首":n+" 首");
     if(c.min)cn.dataset.ok=n<c.min?"low":n>c.max?"high":"ok";hd.append(cn);
-    if(c.k!=="候選"){const tb=el("button","col-tag","看推薦");tb.type="button";
+    if(c.k!=="候選"&&!isX){const tb=el("button","col-tag","看推薦");tb.type="button";
       tb.onclick=()=>{state.scene=c.k;render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb)}
-    if(c.d)hd.append(el("span","col-d",c.d));z.append(hd);
+    if(c.d&&(!isX||xOpen))hd.append(el("span","col-d",c.d));z.append(hd);
     const ul=el("div","col-list");
-    board[c.k].forEach(k=>{total++;const s0=songOf(k);
+    board[c.k].forEach(k=>{if(!isX)total++;const s0=songOf(k);
       const ai=s0.custom?aiSong(s0):null;const s=ai?Object.assign({},s0,{t:ai.title||s0.t,a:ai.artist||s0.a}):s0;
       const p=el("div","pick");p.dataset.k=k;makeDraggable(p,k);
       const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who){const by=el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選");by.style.color=colorOf(who);pa.append(by)}const row=el("div","pick-row");row.append(el("span","pick-t",s.t));tx.append(row,pa);
       if(s0.custom&&boardId&&window.supabase){row.append(aiBadge(s0));tx.classList.add("ai-open");tx.tabIndex=0;tx.setAttribute("role","button");
-        tx.title="查看 AI 查詢結果";tx.onclick=()=>openAi(s0);tx.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openAi(s0)}}}
+        tx.title="查看 AI 查詢結果";tx.onclick=()=>openAi(s0,k);tx.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openAi(s0,k)}}}
       const lang=ai&&ai.language&&ai.language!=="其他"?ai.language:null;
       const lg=lang?el("span","lang mini "+(LC[lang]||""),lang[0]):el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
       if(s0.custom)lg.title=lang?lang+"（自訂歌曲）":"自訂歌曲";
@@ -1058,7 +1084,7 @@ function render(){
   document.querySelectorAll("#langs .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.lang)));
   document.querySelectorAll("#eras .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.era)));
   document.querySelectorAll("#viewSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===state.view)));
-  document.getElementById("segIn").textContent=SONGS.filter(s=>where(key(s))).length;
+  document.getElementById("segIn").textContent=SONGS.filter(s=>placedIn(key(s))).length;
   const list=SONGS.filter(s=>match(s));
   const g=document.getElementById("grid");g.replaceChildren();
   if(!list.length){const em=el("div","empty",state.view==="in"?"歌單裡還沒有符合條件的歌。把歌曲卡片拖到歌單，或用卡片下方的選單加入。":state.view==="out"&&!state.q?"符合條件的歌都已經加入歌單了。":"沒有符合條件的歌，試著放寬篩選。");
@@ -1070,7 +1096,7 @@ function render(){
   const tlst=document.getElementById("trapList");tlst.replaceChildren();
   TRAPS.filter(t=>!state.lang||t.l===state.lang).forEach(t=>{
     const d=el("div","trap");d.append(el("h3",null,t.t),el("div","artist",t.a));
-    const m=el("div","meta");m.append(el("span","lang "+(LC[t.l]||""),t.l));(t.g||[]).forEach(x=>m.append(el("span","flag",x)));d.append(m);
+    const m=el("div","meta");m.append(langChip(t.l));(t.g||[]).forEach(x=>m.append(el("span","flag",x)));d.append(m);
     const ml=el("div","act");ml.append(kkLink(t.t,t.a),ytLink(t.t,t.a));d.append(el("p",null,t.r),ml);tlst.append(d);
   });
   renderBoard();
