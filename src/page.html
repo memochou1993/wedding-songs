@@ -8,7 +8,7 @@
   --paper:#f7f6f3; --card:#ffffff; --ink:#1f1b24; --muted:#6b6470; --line:#e4dfe3;
   --hong:#b3202f;  --hong-soft:#f6e4e5; --gold:#9a7428; --gold-soft:#f3ecdc;
   --warn:#8a5a00; --warn-soft:#fbf1d9; --no:#8f1d29; --no-soft:#f8e3e5;
-  --l-en:#2f5d8a; --l-tw:#2e7a55; --l-jp:#a33a5c; --l-kr:#5a4aa3; --on-hong:#ffffff; --dash:#b3a9b2; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6470' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --l-en:#2f5d8a; --l-tw:#2e7a55; --l-jp:#b8571c; --l-kr:#5a4aa3; --on-hong:#ffffff; --tag:#ebe6ec; --tag-ink:#3d3542; --dash:#b3a9b2; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6470' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --display:"Noto Serif TC","Songti TC","PMingLiU",serif;
   --body:"Noto Sans TC","PingFang TC","Hiragino Sans","Apple SD Gothic Neo","Microsoft JhengHei",system-ui,sans-serif;
   --shadow:0 1px 2px rgba(40,20,30,.06);
@@ -17,13 +17,13 @@
   --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38;
   --hong:#ef6b74; --hong-soft:#3a1e24; --gold:#d9b46a; --gold-soft:#332a1a;
   --warn:#e9b955; --warn-soft:#33290f; --no:#f08a93; --no-soft:#3a1d22;
-  --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#e98aa9; --l-kr:#ada1ee; --on-hong:#1a0d10; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#f19a5c; --l-kr:#ada1ee; --on-hong:#1a0d10; --tag:#2d2732; --tag-ink:#d9d1dc; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --shadow:none; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#16131a; --card:#1f1b24; --ink:#efe9ee; --muted:#a79fab; --line:#342d38;
   --hong:#ef6b74; --hong-soft:#3a1e24; --gold:#d9b46a; --gold-soft:#332a1a;
   --warn:#e9b955; --warn-soft:#33290f; --no:#f08a93; --no-soft:#3a1d22;
-  --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#e98aa9; --l-kr:#ada1ee; --on-hong:#1a0d10; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --l-en:#86b3e0; --l-tw:#7fcca4; --l-jp:#f19a5c; --l-kr:#ada1ee; --on-hong:#1a0d10; --tag:#2d2732; --tag-ink:#d9d1dc; --dash:#6a6070; --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23a79fab' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --shadow:none; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -55,6 +55,31 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .nick-dlg input{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px}
 .nick-dlg .share-btn{align-self:flex-end;margin-top:6px}
 .pick-by{color:var(--gold)}
+.pick-row{display:flex;align-items:center;gap:6px;min-width:0}
+.pick-row .pick-t{min-width:0}
+.ai-badge{display:inline-block;flex:none;font-size:11px;font-weight:700;border-radius:3px;padding:0 6px;line-height:18px;white-space:nowrap}
+.ai-badge.wait{color:var(--muted);background:var(--paper);animation:aiPulse 1.4s ease-in-out infinite}
+.ai-badge.muted{color:var(--muted);background:var(--paper)}
+.ai-badge.ok{color:var(--l-tw);background:color-mix(in srgb,var(--l-tw) 14%,transparent)}
+.ai-badge.warn{color:var(--warn);background:var(--warn-soft)}
+.ai-badge.no{color:var(--no);background:var(--no-soft)}
+@keyframes aiPulse{50%{opacity:.45}}
+.pick-tx.ai-open{cursor:pointer}
+.pick-tx.ai-open:hover .pick-t{text-decoration:underline;text-underline-offset:2px}
+.ai-dlg{width:min(520px,calc(100vw - 32px))}
+.ai-dlg form{gap:12px}
+.ai-dlg{padding:0;overflow:hidden}
+.ai-dlg form{padding:0 0 16px}
+.ai-dlg .song{border:0;border-radius:0;box-shadow:none}
+.ai-dlg .dlg-actions{padding:0 16px}
+.ai-dlg h2{padding:16px 16px 0}
+.ai-dlg #aiBody>.why{padding:0 16px}
+.ai-dlg .trap{margin:0}
+.ai-lbl{font-size:12px;color:var(--muted);margin-right:2px}
+.ai-facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:2px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:13px}
+.ai-facts dt{color:var(--muted);white-space:nowrap}
+.ai-facts dd{margin:0;color:var(--ink);overflow-wrap:anywhere}
+.ai-links{display:flex;gap:8px;margin-right:auto}
 .board-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px;overflow-wrap:anywhere;user-select:all}
 .share-row{display:flex;gap:8px}
 .share-row input{flex:1;min-width:0}
@@ -108,7 +133,7 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .lang{font-size:12px;font-weight:700;border:1.5px solid currentColor;border-radius:3px;padding:0 6px;line-height:20px}
 .lang.en{color:var(--l-en)}.lang.tw{color:var(--l-tw)}.lang.jp{color:var(--l-jp)}.lang.kr{color:var(--l-kr)}
-.scene{font-size:12px;background:var(--hong-soft);color:var(--hong);border-radius:3px;padding:0 7px;line-height:22px}
+.scene{font-size:12px;background:var(--tag);color:var(--tag-ink);border-radius:3px;padding:0 7px;line-height:22px}
 .status{font-size:12px;background:var(--gold-soft);color:var(--gold);border-radius:3px;padding:0 7px;line-height:22px}
 .tempo{font-size:12px;color:var(--muted);display:inline-flex;gap:4px;align-items:center;margin-left:auto}
 .tempo i{display:inline-block;width:6px;height:10px;border-radius:1px;background:var(--line)}
@@ -254,7 +279,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
   <dialog class="nick-dlg" id="customDlg" aria-labelledby="customDlgTitle">
     <form id="customForm">
       <h2 id="customDlgTitle">新增自訂歌曲</h2>
-      <p>清單裡沒有的歌，填好後加進歌單。</p>
+      <p>清單裡沒有的歌，填好後加進歌單。加入後會在背景用 AI 查詢正式歌名、歌詞大意，以及是不是地雷歌，查好會自動更新。</p>
       <div class="custom-fields">
         <label for="customTitle">歌名</label><input id="customTitle" type="text" autocomplete="off" placeholder="例如：小幸運" required>
         <label for="customArtist">歌手</label><input id="customArtist" type="text" autocomplete="off" placeholder="例如：田馥甄">
@@ -265,6 +290,13 @@ body.is-dragging .col.over{border-color:var(--hong)}
         <button class="chip" type="button" id="customCancel">取消</button>
         <button class="share-btn" type="submit" id="customAdd">加入</button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog class="nick-dlg ai-dlg" id="aiDlg" aria-labelledby="aiTitle">
+    <form method="dialog">
+      <div id="aiBody"></div>
+      <div class="dlg-actions"><span class="ai-links" id="aiLinks"></span><button class="share-btn" value="close">關閉</button></div>
     </form>
   </dialog>
 
@@ -808,12 +840,90 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
   await pull(true);
 })();
 
+/* ---------- AI lookup for custom songs: runs in the background, cached server-side ---------- */
+const LOOK={};
+const lookupQuery=s=>(s.t+" "+(s.a||"")).trim();
+const aiSong=s=>{const r=LOOK[lookupQuery(s)];const x=r&&r.status==="done"&&r.output&&Array.isArray(r.output.songs)?r.output.songs[0]:null;return x||null};
+const VERDICT={recommended:["推薦","ok"],acceptable:["可用","ok"],caution:["斟酌","warn"],avoid:["不建議","no"]};
+const REASON={sexual_innuendo:"性暗示",unrequited_love:"單戀",breakup:"分手",infidelity:"劈腿",parting:"離別",death:"悼念",resentment:"怨懟",anti_marriage:"反婚姻",impulsive:"衝動",other:"其他"};
+const TEMPO={fast:"快",medium:"中",slow:"慢"};
+const lowConf=x=>x.confidence==="low"||x.lyrics_source_index===0;
+function aiScenes(x){if(x.is_landmine)return[];let sc=(x.suggested_scenes||[]).filter(k=>COLBY[k]&&k!=="候選");
+  if(x.wedding_verdict==="caution")sc=sc.filter(k=>!["03","04","05"].includes(k));return sc}
+let lookTimer=null,lookBusy=false;
+async function pollLookups(){
+  lookTimer=null;
+  if(!boardId||!window.supabase||lookBusy)return;
+  const qs=[...new Set(COLS.flatMap(c=>board[c.k]).map(songOf).filter(s=>s&&s.custom).map(lookupQuery))]
+    .filter(q=>{const r=LOOK[q];return !r||r.status==="running"||r.status==="pending"});
+  if(!qs.length)return;
+  lookBusy=true;let more=true;
+  try{
+    const res=await fetch(SB_URL+"/functions/v1/song-lookup",{method:"POST",
+      headers:{"content-type":"application/json",apikey:SB_KEY,"x-board-id":boardId},body:JSON.stringify({queries:qs})});
+    if(res.ok){const {results}=await res.json();let changed=false;
+      Object.entries(results||{}).forEach(([q,r])=>{if(!LOOK[q]||LOOK[q].status!==r.status)changed=true;LOOK[q]=r});
+      more=Object.values(results||{}).some(r=>r.status==="running"||r.status==="pending");
+      if(changed)render()}
+  }catch(e){}
+  lookBusy=false;
+  if(more&&!lookTimer)lookTimer=setTimeout(pollLookups,4000);
+}
+function aiBadge(s){
+  /* short label on the board; the full result is in the dialog */
+  const r=LOOK[lookupQuery(s)],x=aiSong(s);
+  const b=(t,cls,tip)=>{const e=el("span","ai-badge "+cls,t);e.title=tip;return e};
+  if(!r||r.status==="running"||r.status==="pending")return b("查詢中…","wait","AI 正在查詢這首歌，查好會自動更新");
+  if(r.status==="limited")return b("已達上限","muted","這份歌單今天的 AI 查詢次數已達上限");
+  if(r.status==="failed")return b("查詢失敗","muted","AI 查詢失敗");
+  if(!x)return b("查不到","muted","AI 查不到這首歌");
+  const [label,cls]=x.is_landmine?["地雷","no"]:VERDICT[x.wedding_verdict]||["已查詢","muted"];
+  const low=lowConf(x);
+  return b(label+(low?"？":""),cls,"AI 判斷："+(VERDICT[x.wedding_verdict]||["已查詢"])[0]+(low?"（找不到足夠的歌詞說明，僅供參考）":"")+"。點歌名看詳細結果");
+}
+function openAi(s){
+  /* the result is laid out with the same card() as the song list, minus the board controls */
+  const r=LOOK[lookupQuery(s)],x=aiSong(s),body=document.getElementById("aiBody"),links=document.getElementById("aiLinks");
+  body.replaceChildren();links.replaceChildren();
+  if(!x){const h=el("h2",null,s.t);h.id="aiTitle";body.append(h,el("p","why",!r||r.status==="running"||r.status==="pending"?"AI 正在查詢這首歌，大約需要半分鐘，查好會自動更新。":r.status==="limited"?"這份歌單今天的 AI 查詢次數已達上限，明天再試。":r.status==="failed"?"AI 查詢失敗。":"AI 查不到這首歌，可能是歌名或歌手有誤。"));
+    links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));document.getElementById("aiDlg").showModal();return}
+  const low=lowConf(x);
+  const c=card({t:x.title||s.t,z:x.title_zh||"",a:x.artist||s.a||"",y:parseInt(x.release_year,10)||null,l:x.language||"其他",
+    s:aiScenes(x),p:TEMPO[x.tempo]||"中",m:x.description||"",w:x.reason||"",
+    c:low?"AI 找不到足夠的歌詞說明，這份判斷僅供參考，請先聽過歌詞再決定。":""});
+  c.classList.remove("placed");c.draggable=false;
+  c.querySelectorAll(".act,.grip").forEach(e=>e.remove());
+  const h=c.querySelector("h3");h.id="aiTitle";
+  /* landmines are already marked by their red tags, so only non-landmine songs get a verdict chip */
+  if(!x.is_landmine){const [label,cls]=VERDICT[x.wedding_verdict]||["已查詢","muted"];
+    c.querySelector(".meta").insertBefore(el("span","ai-badge "+cls,"AI："+label),c.querySelector(".meta .tempo"))}
+  /* landmine tags sit in the first tag row and the detail is plain text, the same way trap cards show them */
+  const tags=(x.landmine_reasons||[]).map(k=>REASON[k]||k);
+  const row1=c.querySelector(".meta"),tempo=row1.querySelector(".tempo");
+  tags.forEach(t=>row1.insertBefore(el("span","flag",t),tempo));
+  const stages=c.querySelector(".meta.stages");
+  if(!stages.children.length)stages.remove();
+  if(x.landmine_detail)c.querySelector(".sum").before(el("p","sum",x.landmine_detail));
+  /* secondary facts as a labelled list, set apart from the description and reason */
+  const facts=el("dl","ai-facts");
+  const fact=(label,...val)=>{facts.append(el("dt",null,label));const dd=el("dd");dd.append(...val);facts.append(dd)};
+  if(x.wedding_evidence)fact("婚禮依據",x.wedding_evidence);
+  if(x.note)fact("補充",x.note);
+  const src=(x.sources||[]).filter(u=>/^https?:\/\//.test(u));
+  if(src.length){const parts=[];src.forEach((u,i)=>{let host=u;try{host=new URL(u).hostname.replace(/^www\./,"")}catch(_){}
+    const a=el("a","src-link",host);a.href=u;a.target="_blank";a.rel="noopener";if(i)parts.push(" · ");parts.push(a)});fact("來源",...parts)}
+  if(s.t!==x.title||(s.a||"")!==(x.artist||""))fact("你的輸入","歌名「"+s.t+"」"+(s.a?" · 歌手「"+s.a+"」":""));
+  if(facts.children.length)c.append(facts);
+  body.append(c);
+  links.append(kkLink(x.title||s.t,x.artist||s.a||""),ytLink(x.title||s.t,x.artist||s.a||""));
+  document.getElementById("aiDlg").showModal();
+}
 /* ---------- custom song dialog ---------- */
 let openCustom=()=>{};
 function setupCustomDialog(){
   const dlg=document.getElementById("customDlg"),form=document.getElementById("customForm"),ti=document.getElementById("customTitle"),ai=document.getElementById("customArtist"),
     sel=document.getElementById("customStage"),add=document.getElementById("customAdd"),links=document.getElementById("customLinks");
-  COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選（未決定）":colLabel(c),c.k)));
+  COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選":colLabel(c),c.k)));
   const kk=kkLink("",""),yt=ytLink("","");links.append(kk,yt);
   const val=()=>({t:ti.value.trim(),a:ai.value.trim()});
   const sync=()=>{const v=val(),ok=!!v.t;kk.href=kkUrl(v.t,v.a);yt.href=ytUrl(v.t,v.a);
@@ -871,7 +981,7 @@ function placeSelect(k,label){
   const sel=el("select","place");sel.setAttribute("aria-label",label);
   const cur=where(k);
   sel.append(new Option(cur?"移出歌單":"＋ 加入歌單…",""));
-  COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選（未決定）":colLabel(c),c.k)));
+  COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選":colLabel(c),c.k)));
   sel.value=cur||"";if(!cur)sel.options[0].disabled=false;
   sel.onchange=()=>move(k,sel.value||null);
   return sel;
@@ -887,7 +997,7 @@ function card(s){
   h.append(left,grip);c.append(h);
   /* row 1: fixed facts (language, period, tempo) so it never wraps; row 2: the stages, which vary in count */
   const meta=el("div","meta");
-  meta.append(el("span","lang "+LC[s.l],s.l),el("span","status",ERA_LABEL[eraOf(s)]));
+  meta.append(el("span","lang "+(LC[s.l]||""),s.l),el("span","status",ERA_LABEL[eraOf(s)]));
   const tp=el("span","tempo");tp.title="節奏："+s.p;const lv={"慢":1,"中":2,"快":3}[s.p];
   for(let i=1;i<=3;i++){const d=el("i",i<=lv?"on":"");d.style.height=(6+i*3)+"px";tp.append(d)}
   tp.append(" "+s.p);meta.append(tp);
@@ -917,10 +1027,15 @@ function renderBoard(){
       tb.onclick=()=>{state.scene=c.k;render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb)}
     if(c.d)hd.append(el("span","col-d",c.d));z.append(hd);
     const ul=el("div","col-list");
-    board[c.k].forEach(k=>{total++;const s=songOf(k);
+    board[c.k].forEach(k=>{total++;const s0=songOf(k);
+      const ai=s0.custom?aiSong(s0):null;const s=ai?Object.assign({},s0,{t:ai.title||s0.t,a:ai.artist||s0.a}):s0;
       const p=el("div","pick");p.dataset.k=k;makeDraggable(p,k);
-      const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who){const by=el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選");by.style.color=colorOf(who);pa.append(by)}tx.append(el("span","pick-t",s.t),pa);
-      const lg=el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
+      const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who){const by=el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選");by.style.color=colorOf(who);pa.append(by)}const row=el("div","pick-row");row.append(el("span","pick-t",s.t));tx.append(row,pa);
+      if(s0.custom&&boardId&&window.supabase){row.append(aiBadge(s0));tx.classList.add("ai-open");tx.tabIndex=0;tx.setAttribute("role","button");
+        tx.title="查看 AI 查詢結果";tx.onclick=()=>openAi(s0);tx.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openAi(s0)}}}
+      const lang=ai&&ai.language&&ai.language!=="其他"?ai.language:null;
+      const lg=lang?el("span","lang mini "+(LC[lang]||""),lang[0]):el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
+      if(s0.custom)lg.title=lang?lang+"（自訂歌曲）":"自訂歌曲";
       const rm=el("button","rm","×");rm.type="button";rm.setAttribute("aria-label","從歌單移除 "+s.t);rm.onclick=()=>move(k,null);
       p.append(lg,tx,kkLink(s.t,s.a,true),ytLink(s.t,s.a,true),rm);ul.append(p)});
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
@@ -929,6 +1044,7 @@ function renderBoard(){
 }
 
 function render(){
+  if(boardId&&!lookTimer&&!lookBusy)lookTimer=setTimeout(pollLookups,300);
   document.querySelectorAll("#scenes .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.scene)));
   document.querySelectorAll("#langs .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.lang)));
   document.querySelectorAll("#eras .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.era)));
