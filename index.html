@@ -86,7 +86,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .ai-dlg .trap{margin:0}
 .ai-lbl{font-size:12px;color:var(--muted);margin-right:2px}
 .ai-facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:2px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:13px}
-.ai-facts dt{color:var(--muted);white-space:nowrap}
+.ai-facts dt{color:var(--muted);white-space:nowrap;text-align:right}
 .ai-facts dd{margin:0;color:var(--ink);overflow-wrap:anywhere}
 .ai-links{display:flex;gap:8px;margin-right:auto}
 .board-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px;overflow-wrap:anywhere;user-select:all}
@@ -149,8 +149,12 @@ header.top h1{font-size:clamp(28px,4vw,40px);font-weight:900;letter-spacing:.02e
 .tempo i.on{background:var(--muted)}
 .sum{margin:0}
 .why{margin:0;font-size:13px;color:var(--muted)}
-.src-link{color:var(--muted);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
-.src-link:hover{color:var(--hong)}
+.src-list{display:flex;flex-wrap:wrap;gap:6px}
+.src-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.src-lbl{font-size:12px;color:var(--muted)}
+.src-chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;line-height:20px;padding:0 8px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.src-chip:hover{border-color:var(--hong);color:var(--hong)}
+.src-arrow{font-size:10px;color:var(--muted)}
 .caution{margin:0;font-size:13px;background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:6px 10px}
 .yt{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 12px 3px 10px}
 .yt:hover{border-color:var(--hong);color:var(--hong)}
@@ -707,6 +711,18 @@ const ERAS=[["70","70年代以前"],["80","80年代"],["90","90年代"],["00","2
 const ERA_LABEL=Object.fromEntries(ERAS);
 function eraOf(s){if(!s.y)return "?";if(s.y<1980)return "70";const d=Math.floor(s.y/10)*10;return d<2000?String(d%100):String(d%100).padStart(2,"0")}
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
+/* source links as chips: known sites get a readable name, others their main domain */
+const SITE_NAMES=[["wikipedia.org","維基百科"],["genius.com","Genius"],["kkbox.com","KKBOX"],["spotify.com","Spotify"],["youtube.com","YouTube"],
+  ["music.apple.com","Apple Music"],["dcard.tw","Dcard"],["ptt.cc","PTT"],["threads.com","Threads"],["threads.net","Threads"],["zexy.net","ゼクシィ"],
+  ["mwed.jp","みんなのウェディング"],["anniversaire.co.jp","アニヴェルセル"],["prtimes.jp","PR TIMES"],["utaten.com","UtaTen"],["note.com","note"],
+  ["ragnet.co.jp","RAG MUSIC"],["weddmusicbox.com","WEDDING MUSIC BOX"],["theknot.com","The Knot"],["weddingwire","WeddingWire"],
+  ["myweddingsongs.com","My Wedding Songs"],["songfacts.com","Songfacts"],["namu.wiki","나무위키"],["naver.com","Naver"],["melon.com","Melon"],
+  ["weddingday.com.tw","WeddingDay"],["marry.com.tw","好婚市集"],["storywed.com.tw","StoryWed"],["creatrip.com","Creatrip"],["soompi.com","Soompi"]];
+const SLD=new Set(["co.jp","ne.jp","or.jp","co.kr","or.kr","com.tw","org.tw","net.tw","com.au","co.uk","com.hk"]);
+function siteName(u){let h="";try{h=new URL(u).hostname.replace(/^www\./,"")}catch(_){return u}
+  const hit=SITE_NAMES.find(([d])=>h===d||h.endsWith("."+d)||h.includes(d));if(hit)return hit[1];
+  const p=h.split(".");return p.slice(SLD.has(p.slice(-2).join("."))?-3:-2).join(".")}
+function srcChip(u){const a=el("a","src-chip",siteName(u));a.href=u;a.target="_blank";a.rel="noopener";a.title=u;a.append(el("span","src-arrow","↗"));return a}
 const ytUrl=(t,a)=>"https://www.youtube.com/results?search_query="+encodeURIComponent(t+" "+a.replace(/（[^）]*）/g,"").split("／")[0].trim());
 function ytLink(t,a,short){const x=el("a","yt"+(short?" yt-s":""));x.href=ytUrl(t,a);x.target="_blank";x.rel="noopener";
   x.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';if(!short)x.append("YouTube");
@@ -920,9 +936,9 @@ function openAi(s,k){
   c.classList.remove("placed");c.draggable=false;
   c.querySelectorAll(".act,.grip").forEach(e=>e.remove());
   const h=c.querySelector("h3");h.id="aiTitle";
-  /* landmines are already marked by their red tags, so only non-landmine songs get a verdict chip */
-  if(!x.is_landmine){const [label,cls]=VERDICT[x.wedding_verdict]||["已查詢","muted"];
-    c.querySelector(".meta").insertBefore(el("span","ai-badge "+cls,"AI："+label),c.querySelector(".meta .tempo"))}
+  /* verdict chip: 推薦／可用／斟酌, or 地雷 followed by its reason tags */
+  {const [label,cls]=x.is_landmine?["地雷","no"]:VERDICT[x.wedding_verdict]||["已查詢","muted"];
+    c.querySelector(".meta").insertBefore(el("span","ai-badge "+cls,label),c.querySelector(".meta .tempo"))}
   /* landmine tags sit in the first tag row and the detail is plain text, the same way trap cards show them */
   const tags=(x.landmine_reasons||[]).map(k=>REASON[k]||k);
   const row1=c.querySelector(".meta"),tempo=row1.querySelector(".tempo");
@@ -936,9 +952,10 @@ function openAi(s,k){
   if(x.wedding_evidence)fact("婚禮依據",x.wedding_evidence);
   if(x.note)fact("補充",x.note);
   const src=(x.sources||[]).filter(u=>/^https?:\/\//.test(u));
-  if(src.length){const parts=[];src.forEach((u,i)=>{let host=u;try{host=new URL(u).hostname.replace(/^www\./,"")}catch(_){}
-    const a=el("a","src-link",host);a.href=u;a.target="_blank";a.rel="noopener";if(i)parts.push(" · ");parts.push(a)});fact("來源",...parts)}
-  if(s.t!==x.title||(s.a||"")!==(x.artist||""))fact("你的輸入","歌名「"+s.t+"」"+(s.a?" · 歌手「"+s.a+"」":""));
+  if(s.t!==x.title||(s.a||"")!==(x.artist||""))fact("你的輸入","歌名「"+s.t+"」"+(s.a?"·歌手「"+s.a+"」":""));
+  if(src.length){const list=el("span","src-list"),seen={};
+    src.forEach(u=>{const n=siteName(u),dup=src.filter(v=>siteName(v)===n).length>1;seen[n]=(seen[n]||0)+1;
+      const chip=srcChip(u);if(dup)chip.firstChild.textContent=n+" "+seen[n];list.append(chip)});fact("來源",list)}
   if(facts.children.length)c.append(facts);
   body.append(c);
   links.append(kkLink(x.title||s.t,x.artist||s.a||""),ytLink(x.title||s.t,x.artist||s.a||""));
@@ -947,6 +964,26 @@ function openAi(s,k){
     document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
   document.getElementById("aiDlg").showModal();
 }
+/* songs from the list open their own card in the same dialog the AI results use */
+function openSong(s,k){
+  if(s.custom)return openAi(s,k);
+  const body=document.getElementById("aiBody"),links=document.getElementById("aiLinks");
+  body.replaceChildren();links.replaceChildren();
+  document.querySelectorAll("#aiDlg .move-x").forEach(e=>e.remove());
+  let c;
+  if(s.trap){
+    c=el("article","song");const h=el("h3",null,s.t);c.append(h,el("div","artist",s.a));
+    const m=el("div","meta");m.append(langChip(s.l));(s.g||[]).forEach(x=>m.append(el("span","flag",x)));c.append(m,el("p","sum",s.r));
+  }else{
+    c=card(s);c.classList.remove("placed");c.draggable=false;c.querySelectorAll(".act,.grip").forEach(e=>e.remove());
+  }
+  c.querySelector("h3").id="aiTitle";body.append(c);
+  links.append(kkLink(s.t,s.a),ytLink(s.t,s.a));
+  if(s.trap&&where(k)&&where(k)!=="X"){const xb=el("button","chip move-x","排除");xb.type="button";
+    xb.onclick=()=>{move(k,"X");document.getElementById("aiDlg").close()};document.querySelector("#aiDlg .dlg-actions .share-btn").before(xb)}
+  document.getElementById("aiDlg").showModal();
+}
+
 /* ---------- custom song dialog ---------- */
 let openCustom=()=>{};
 function setupCustomDialog(){
@@ -1034,10 +1071,9 @@ function card(s){
   const stages=el("div","meta stages");s.s.forEach(x=>stages.append(el("span","scene",stageName(x))));
   c.append(meta,stages);
   const why=el("p","why",s.w);
-  if(s.src){let host="";try{host=new URL(s.src).hostname.replace(/^www\./,"")}catch(_){}
-    const ln=el("a","src-link","來源："+host);ln.href=s.src;ln.target="_blank";ln.rel="noopener";why.append(" ",ln)}
   c.append(el("p","sum",s.m),why);
   if(s.c)c.append(el("p","caution","提醒："+s.c));
+  if(s.src){const row=el("div","src-row");row.append(el("span","src-lbl","來源"),srcChip(s.src));c.append(row)}
   const act=el("div","act");act.append(kkLink(s.t,s.a),ytLink(s.t,s.a),placeSelect(k,"把 "+s.t+" 加入歌單"));
   if(cur){const inn=el("span","in"+(cur==="X"?" out":""),cur==="X"?"已排除":"已在「"+(cur==="候選"?"候選":cur+" "+COLBY[cur].n)+"」");const who=pickerOf(k);
     if(who){const by=el("span","in-by"," · 由"+who+"挑選");by.style.color=colorOf(who);inn.append(by)}act.append(inn)}
@@ -1066,8 +1102,11 @@ function renderBoard(){
       const ai=s0.custom?aiSong(s0):null;const s=ai?Object.assign({},s0,{t:ai.title||s0.t,a:ai.artist||s0.a}):s0;
       const p=el("div","pick");p.dataset.k=k;makeDraggable(p,k);
       const tx=el("div","pick-tx");const pa=el("span","pick-a",s.a.replace(/（[^）]*）/g,""));const who=pickerOf(k);if(who){const by=el("span","pick-by",(s.a?" · ":"")+"由"+who+"挑選");by.style.color=colorOf(who);pa.append(by)}const row=el("div","pick-row");row.append(el("span","pick-t",s.t));tx.append(row,pa);
-      if(s0.custom&&boardId&&window.supabase){row.append(aiBadge(s0));tx.classList.add("ai-open");tx.tabIndex=0;tx.setAttribute("role","button");
-        tx.title="查看 AI 查詢結果";tx.onclick=()=>openAi(s0,k);tx.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openAi(s0,k)}}}
+      const aiOn=s0.custom&&boardId&&window.supabase;
+      if(aiOn)row.append(aiBadge(s0));
+      if(aiOn||!s0.custom){tx.classList.add("ai-open");tx.tabIndex=0;tx.setAttribute("role","button");
+        tx.title=s0.custom?"查看 AI 檢測結果":"查看歌曲卡片";const open=()=>openSong(s0,k);
+        tx.onclick=open;tx.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}}}
       const lang=ai&&ai.language&&ai.language!=="其他"?ai.language:null;
       const lg=lang?el("span","lang mini "+(LC[lang]||""),lang[0]):el("span","lang mini "+(s.custom?"custom":LC[s.l]||""),s.l==="華語"?"華":s.l[0]);
       if(s0.custom)lg.title=lang?lang+"（自訂歌曲）":"自訂歌曲";
