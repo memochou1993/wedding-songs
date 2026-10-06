@@ -66,7 +66,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .nick-dlg::backdrop{background:rgba(20,10,15,.55)}
 .nick-dlg form{display:flex;flex-direction:column;gap:10px}
 .nick-dlg h2{font-size:22px}
-.nick-dlg p{margin:0;color:var(--muted);font-size:14px}
+.nick-dlg form>p{margin:0;color:var(--muted);font-size:14px}  /* the dialog's own intro line, not the song cards shown inside */
 .nick-dlg label{font-size:13px;color:var(--muted);margin-top:4px}
 .nick-dlg input{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px}
 .nick-dlg .share-btn{align-self:flex-end;margin-top:6px}
