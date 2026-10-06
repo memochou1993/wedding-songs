@@ -19,6 +19,8 @@ const ALLOWED_ORIGINS = new Set([
   "https://memochou1993.github.io",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3001",
 ]);
 const ID_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const MAX_QUERIES = 20;
