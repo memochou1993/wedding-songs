@@ -1,7 +1,7 @@
 // song-lookup: runs the wedding-song-screener workflow for custom songs, in the background.
 //
 // POST { queries: string[], songs?: { [query]: { title, artist } }, refresh?: string[] } with header x-board-id
-//   → { results: { [query]: { status, output?, error?, refused?, kk? } } }
+//   → { results: { [query]: { status, output?, error?, refused?, kk?, yt? } } }
 //
 // status: running | done | failed | pending (board not saved yet, retry later) | limited (daily cap hit)
 // refresh: queries (also listed in queries) to look up again, ignoring the cached result. A re-check counts
@@ -10,6 +10,7 @@
 // one (older pages) is sent as the title alone, and the workflow works out the artist.
 // kk: the song's KKBOX track id, found once with the title and artist the workflow settled on. Its song page
 // opens the KKBOX app on phones (a search page doesn't). Results looked up before this get it on their next poll.
+// yt: the song's YouTube video id, found the same way with the YouTube Data API, so the YouTube button plays it on the page.
 // The browser calls this every few seconds while any of its custom songs is still running.
 // A workflow execution keeps going on the platform even if nobody is polling; the next poll
 // from any viewer of the board picks up the finished result. Results are cached per query in
@@ -38,7 +39,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
   auth: { persistSession: false },
 });
 
-type Result = { status: string; output?: unknown; error?: string; refused?: string; kk?: string };
+type Result = { status: string; output?: unknown; error?: string; refused?: string; kk?: string; yt?: string };
 type Song = { title: string; artist: string };
 
 const norm = (q: string) => q.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
@@ -124,6 +125,68 @@ async function kkboxFor(key: string, output: unknown, asked: Song): Promise<stri
     return undefined;
   }
 }
+// ---------- YouTube video id ----------
+const YT_KEY = Deno.env.get("YOUTUBE_API_KEY") ?? "";
+let ytQueue: Promise<unknown> = Promise.resolve();
+// covers, live takes, karaoke, lyric-only re-uploads at odd speeds…: never the song itself
+const YT_NOT = /\blive\b|cover|karaoke|伴奏|伴唱|カラオケ|노래방|remix|instrumental|\bmr\b|\binst\b|hour|reaction|tutorial|教學|翻唱|純享|歌ってみた|sped ?up|slowed|8d|nightcore|fancam|直拍|teaser|preview|piano|guitar|吉他|鋼琴|first take|演唱會|現場|concert|\btour\b|ツアー|ライブ|투어|라이브|medley|串燒|playlist/i;
+
+async function ytGet(path: string, params: Record<string, string>) {
+  const u = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
+  u.search = new URLSearchParams({ ...params, key: YT_KEY }).toString();
+  const res = await fetch(u, { signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`youtube ${path} ${res.status} ${(await res.text()).slice(0, 200)}`);
+  return await res.json();
+}
+
+// search costs 100 of the 10,000 daily quota units, so it runs once per song (the result is cached in song.lookups).
+// Prefer the artist's own channel, its "- Topic" channel or a VEVO/official one, with the title in the video name.
+async function findYoutube(tries: Song[]): Promise<string> {
+  const { title, artist } = tries.find((t) => t.title) ?? { title: "", artist: "" };
+  if (!title) return "";
+  const main = artist.replace(/[（(][^）)]*[）)]/g, "").split(/[／/&、,×]/)[0].trim();
+  const T = tries.flatMap((t) => names(t.title)), A = tries.flatMap((t) => artistNames(t.artist));
+  const found = await ytGet("search", { part: "snippet", type: "video", videoEmbeddable: "true", maxResults: "10", q: `${title} ${main}`.trim() });
+  type Item = { id: { videoId: string }; snippet: { title: string; channelTitle: string } };
+  const items: Item[] = found.items ?? [];
+  if (!items.length) return "";
+  const det = await ytGet("videos", { part: "contentDetails", id: items.map((i) => i.id.videoId).join(",") });
+  const secs: Record<string, number> = {};
+  for (const v of det.items ?? []) {
+    const m = String(v.contentDetails?.duration ?? "").match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (m) secs[v.id] = (+(m[1] ?? 0)) * 3600 + (+(m[2] ?? 0)) * 60 + (+(m[3] ?? 0));
+  }
+  const score = (i: Item, rank: number) => {
+    const vt = i.snippet.title, ch = i.snippet.channelTitle, nv = bare(vt), nc = bare(ch), d = secs[i.id.videoId] ?? 0;
+    let s = -rank * 0.3;  // YouTube's own order breaks ties
+    if (YT_NOT.test(vt) && !YT_NOT.test(title)) s -= 10;
+    if (d < 90 || d > 600) s -= 10;
+    if (A.some((a) => a.length >= 2 && (nc.includes(a) || a.includes(nc))) || / - topic$/i.test(ch)) s += 4;
+    else if (/vevo|official|官方|公式|records|music|entertainment|唱片|音樂|뮤직|1thek|stone music/i.test(ch)) s += 2;
+    s += T.some((t) => t && nv.includes(t)) ? 3 : -5;  // a video named otherwise is another song more often than not
+    if (/official|官方|公式|\bmv\b|m\/v|audio/i.test(vt)) s += 1;
+    return s;
+  };
+  const best = items.map((i, n) => ({ id: i.id.videoId, s: score(i, n) })).sort((a, b) => b.s - a.s)[0];
+  return best && best.s > 0 ? best.id : "";
+}
+
+async function youtubeFor(key: string, output: unknown, asked: Song): Promise<string | undefined> {
+  if (!YT_KEY) return undefined;
+  const o = (output ?? {}) as { song?: Song | null; songs?: Song[] };
+  const s = o.song ?? o.songs?.[0] ?? asked;
+  const run = ytQueue.then(() => findYoutube([{ title: s.title || asked.title, artist: s.artist || asked.artist }, asked]));
+  ytQueue = run.catch(() => {});
+  try {
+    const id = await run;
+    await db.from("lookups").update({ youtube_id: id }).eq("query_norm", key);
+    return id || undefined;
+  } catch (e) {
+    console.error("youtube", key, e);  // left unset, so a later poll tries again
+    return undefined;
+  }
+}
+
 function corsHeaders(origin: string | null): Record<string, string> {
   const h: Record<string, string> = {
     "Access-Control-Allow-Headers": "content-type, x-board-id, apikey, authorization, x-client-info",
@@ -185,7 +248,8 @@ async function poll(key: string, arn: string, song: Song): Promise<Result> {
   if (ex.status === "RUNNING") return { status: "running" };
   if (ex.status === "SUCCEEDED") {
     await db.from("lookups").update({ status: "done", output: ex.output, updated_at: new Date().toISOString() }).eq("query_norm", key);
-    return { status: "done", output: ex.output, kk: await kkboxFor(key, ex.output, song) };
+    const [kk, yt] = await Promise.all([kkboxFor(key, ex.output, song), youtubeFor(key, ex.output, song)]);
+    return { status: "done", output: ex.output, kk, yt };
   }
   const msg = [ex.status, ex.error, ex.cause].filter(Boolean).join(": ").slice(0, 500) || "unknown";
   await db.from("lookups").update({ status: "failed", error: msg, updated_at: new Date().toISOString() }).eq("query_norm", key);
@@ -199,7 +263,7 @@ async function restart(query: string, key: string, boardId: string, song: Song, 
     const started = await lfe("runtime/start-execution", { workflow_id: WORKFLOW_ID, input: song });
     const now = new Date().toISOString();
     const { error } = await db.from("lookups").update({
-      query, status: "running", execution_arn: started.execution_arn, output: null, error: null, kkbox_id: null,
+      query, status: "running", execution_arn: started.execution_arn, output: null, error: null, kkbox_id: null, youtube_id: null,
       board_id: boardId, created_at: now, updated_at: now,
     }).eq("query_norm", key);
     if (error) throw new Error(`update ${error.message}`);
@@ -213,14 +277,17 @@ async function restart(query: string, key: string, boardId: string, song: Song, 
 
 async function handle(query: string, boardId: string, refresh: boolean, song: Song): Promise<Result> {
   const key = norm(query);
-  const { data: row } = await db.from("lookups").select("status, execution_arn, output, kkbox_id").eq("query_norm", key).maybeSingle();
+  const { data: row } = await db.from("lookups").select("status, execution_arn, output, kkbox_id, youtube_id").eq("query_norm", key).maybeSingle();
   if (!row) return await start(query, key, boardId, song);
   if (refresh && row.status !== "running") {
     return await restart(query, key, boardId, song, row.status === "done" ? { status: "done", output: row.output } : { status: "failed", error: "查詢失敗" });
   }
   if (row.status === "done") {
-    const kk = row.kkbox_id === null ? await kkboxFor(key, row.output, song) : row.kkbox_id || undefined;
-    return { status: "done", output: row.output, kk };
+    const [kk, yt] = await Promise.all([
+      row.kkbox_id === null ? kkboxFor(key, row.output, song) : row.kkbox_id || undefined,
+      row.youtube_id === null ? youtubeFor(key, row.output, song) : row.youtube_id || undefined,
+    ]);
+    return { status: "done", output: row.output, kk, yt };
   }
   if (row.status === "failed") return { status: "failed", error: "查詢失敗" };
   return row.execution_arn ? await poll(key, row.execution_arn, song) : { status: "running" };

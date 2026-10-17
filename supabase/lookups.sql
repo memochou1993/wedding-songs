@@ -11,6 +11,7 @@ create table if not exists song.lookups (
   error text,
   board_id text,
   kkbox_id text,  -- KKBOX track id for the song page (opens the app on phones); null = not looked up yet, '' = none found
+  youtube_id text,  -- YouTube video id the YouTube button plays; null = not looked up yet, '' = none found
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -26,3 +27,4 @@ grant select on song.boards to service_role;
 
 -- added later; safe to rerun
 alter table song.lookups add column if not exists kkbox_id text;
+alter table song.lookups add column if not exists youtube_id text;
