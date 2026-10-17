@@ -255,7 +255,21 @@ body.is-dragging .col.over{border-color:var(--hong)}
 /* empty slots keep their width so the avatars line up down the column */
 /* [picker][♥][⋮] travel as one group of 28px slots; empty slots keep their width so columns line up down the list */
 .pick-acts{display:flex;align-items:center;gap:2px}
-.like-ph,.picker-ph{width:28px}
+.like-ph,.picker-ph,.play-ph{width:28px}
+/* ▶ plays the song's YouTube source in the floating player; the playing row shows ❚❚ */
+.play-btn{appearance:none;border:0;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:4px;cursor:pointer;align-self:center;flex:none}
+.play-btn:hover{background:var(--hover);color:var(--ink)}
+.play-btn.on{color:var(--hong)}
+.play-btn svg{width:14px;height:14px;fill:currentColor}
+.pick.playing{background:var(--hong-soft)}
+.yt-mini{position:fixed;right:16px;bottom:16px;z-index:40;width:320px;max-width:calc(100vw - 32px);background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(20,10,15,.22);overflow:hidden}
+.yt-mini[hidden]{display:none}
+.yt-head{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 12px}
+.yt-now{flex:1;min-width:0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.yt-x{appearance:none;border:0;background:transparent;color:var(--muted);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:16px;flex:none}
+.yt-x:hover{background:var(--hover);color:var(--ink)}
+.yt-frame{aspect-ratio:16/9;background:#000}
+.yt-frame iframe,.yt-frame>div{width:100%;height:100%;display:block;border:0}
 .who{display:flex;align-items:center;gap:6px;min-width:0}
 .who-n{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .avatar.picker{width:20px;height:20px;font-size:11px;margin:0;border:0;align-self:center}
@@ -320,6 +334,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
   .tabbar button[aria-pressed="true"]{color:var(--ink);background:var(--hover)}
   .tab-ico{width:18px;height:18px;flex:none;fill:currentColor;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
   .tab-ico circle{stroke:none}
+  .yt-mini{right:12px;left:12px;width:auto;max-width:none;bottom:calc(72px + env(safe-area-inset-bottom,0px))}
   .toast{display:block;position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:31;
     background:var(--ink);color:var(--paper);font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;opacity:0;pointer-events:none;
     transition:opacity .18s,transform .18s;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
@@ -443,6 +458,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
     <div class="trap-list" id="trapList"></div>
   </section>
 
+  <div class="yt-mini" id="ytMini" hidden><div class="yt-head"><span class="yt-now" id="ytNow"></span><button class="yt-x" id="ytClose" type="button" aria-label="關閉播放器">×</button></div><div class="yt-frame"><div id="ytPlayer"></div></div></div>
   <nav class="tabbar" id="tabbar" aria-label="切換畫面">
     <button type="button" data-tab="pick" aria-pressed="true"><svg class="tab-ico" viewBox="0 0 18 18" aria-hidden="true"><path d="M6.5 13.5V4l8.5-1.8v9.5" fill="none"/><circle cx="4.5" cy="13.5" r="2.2"/><circle cx="13" cy="11.7" r="2.2"/></svg>選歌</button>
     <button type="button" data-tab="board" aria-pressed="false"><svg class="tab-ico" viewBox="0 0 18 18" aria-hidden="true"><path d="M7 4.5h8.5M7 9h8.5M7 13.5h8.5" fill="none"/><circle cx="3.2" cy="4.5" r="1.3"/><circle cx="3.2" cy="9" r="1.3"/><circle cx="3.2" cy="13.5" r="1.3"/></svg>歌單</button>
@@ -819,7 +835,7 @@ function kkLink(t,a,id){const x=el("a","yt kk");x.href=id?"https://www.kkbox.com
   x.setAttribute("aria-label",how+" "+t);x.title=how;return x}
 
 /* ---------- board state: shared db when available, this browser otherwise ---------- */
-const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{},_ai:{},_color:{}});
+const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{},_ai:{},_color:{},_yt:{}});
 function clean(b){const out=emptyBoard(),seen=new Set();
   if(b&&typeof b==="object")Object.keys(b).forEach(ck=>{const to=COLBY[ck]?ck:OLDCOL[ck];if(!to||!Array.isArray(b[ck]))return;
     b[ck].forEach(k=>{if(songOf(k)&&!seen.has(k)){seen.add(k);out[to].push(k)}})});
@@ -836,6 +852,11 @@ function clean(b){const out=emptyBoard(),seen=new Set();
   /* _color: nickname → {c: avatar colour index someone chose, t: when}; c -1 means cleared (the name was renamed away) */
   const co=b&&b._color;
   if(co&&typeof co==="object")Object.keys(co).forEach(n=>{const v=co[n];if(n&&n.length<=20&&v&&Number.isInteger(v.c)&&v.c>=-1&&v.c<6)out._color[n]={c:v.c,t:+v.t||0}});
+  /* _yt: song key → {v: YouTube video id the ▶ plays, s: second to start from, t: when set}; {x: when} marks a removed source so merging can't bring it back */
+  const yt=b&&b._yt;
+  if(yt&&typeof yt==="object")Object.keys(yt).forEach(k=>{const v=yt[k];if(!seen.has(k)||!v)return;
+    if(typeof v.v==="string"&&/^[\w-]{11}$/.test(v.v))out._yt[k]=Object.assign({v:v.v},v.s>0?{s:Math.floor(v.s)}:{},v.t>0?{t:+v.t}:{});
+    else if(+v.x>0)out._yt[k]={x:+v.x}});
   return out}
 let nickname="";try{nickname=localStorage.getItem("wedding-nickname")||""}catch(e){}
 const pickerOf=k=>board._by&&board._by[k]?board._by[k].n:"";
@@ -845,6 +866,12 @@ const likersOf=k=>{const m=board._like[k]||{};return Object.keys(m).filter(n=>m[
 /* chosen colours from a board saved elsewhere: per person, the newer choice wins */
 function mergeColors(b,remote){const r=remote&&remote._color;if(!r||typeof r!=="object")return;
   Object.keys(r).forEach(n=>{const v=r[n];if(v&&Number.isInteger(v.c)&&v.c>=-1&&v.c<6&&(+v.t||0)>(b._color[n]?.t||0))b._color[n]={c:v.c,t:+v.t||0}})}
+/* keep the newer YouTube source (or removal) per song from a board saved elsewhere */
+const ytTime=y=>y?+(y.t||y.x||0):-1;
+function mergeYt(b,remote){const r=remote&&remote._yt;if(!r||typeof r!=="object")return;
+  Object.keys(r).forEach(k=>{const v=r[k];if(!v||!COLS.some(c=>b[c.k].includes(k)))return;
+    const ok=typeof v.v==="string"&&/^[\w-]{11}$/.test(v.v);if(!ok&&!(+v.x>0))return;
+    if(ytTime(v)>ytTime(b._yt[k]))b._yt[k]=ok?Object.assign({v:v.v},v.s>0?{s:Math.floor(v.s)}:{},v.t>0?{t:+v.t}:{}):{x:+v.x}})}
 function mergeLikes(b,remote){const r=remote&&remote._like;if(!r||typeof r!=="object")return;
   Object.keys(r).forEach(k=>{if(!COLS.some(c=>b[c.k].includes(k))||!r[k]||typeof r[k]!=="object")return;
     const m=b._like[k]||{};Object.keys(r[k]).forEach(n=>{const t=+r[k][n];if(t&&Math.abs(t)>Math.abs(m[n]||0))m[n]=t});
@@ -907,7 +934,7 @@ function move(k,col,before){
   COLS.forEach(c=>{board[c.k]=board[c.k].filter(x=>x!==k)});
   if(col){const arr=board[col];const i=before?arr.indexOf(before):-1;i>=0?arr.splice(i,0,k):arr.push(k)}
   if(col&&!was&&nickname)board._by[k]={n:nickname,t:Date.now()};
-  if(!col){delete board._by[k];delete board._like[k];delete board._ai[k]}
+  if(!col){delete board._by[k];delete board._like[k];delete board._ai[k];delete board._yt[k]}
   persist();render();
 }
 function toggleLike(k){
@@ -1042,8 +1069,8 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
   remoteSave=async b=>{
     /* the whole board is overwritten, so first fold in likes saved by others meanwhile */
     const cur=await sb.from("boards").select("cols").eq("id",boardId).maybeSingle();
-    if(cur.data){const before=JSON.stringify([b._like,b._color]);mergeLikes(b,cur.data.cols);mergeColors(b,cur.data.cols);
-      if(JSON.stringify([b._like,b._color])!==before){saveLocal();render()}}
+    if(cur.data){const before=JSON.stringify([b._like,b._color,b._yt]);mergeLikes(b,cur.data.cols);mergeColors(b,cur.data.cols);mergeYt(b,cur.data.cols);
+      if(JSON.stringify([b._like,b._color,b._yt])!==before){saveLocal();render()}}
     const {error}=await sb.from("boards").upsert({id:boardId,cols:b,updated_at:new Date().toISOString()});
     if(error)throw error;
     chan.send({type:"broadcast",event:"updated",payload:{}}).catch(()=>{});
@@ -1294,6 +1321,41 @@ function card(s){
 }
 /* playlist row ⋮: listen on KKBOX / YouTube or remove, in one shared popover placed under the button */
 let menuBtn=null,menuClosedAt=0;
+/* ---------- ▶ player: the song's YouTube source in a small floating player (YouTube needs the video visible) ---------- */
+let ytCur=null,ytApi=null,ytPlayer=null,ytState=-1;
+const PLAY_SVG='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>',PAUSE_SVG='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zm6 0h3v11h-3z"/></svg>';
+const ytPlaying=k=>ytCur===k&&(ytState===1||ytState===3);
+function playBtn(k,s){
+  const y=board._yt[k];if(!y||!y.v)return el("span","play-ph");
+  const on=ytPlaying(k),b=el("button","play-btn"+(on?" on":""));b.type="button";
+  b.setAttribute("aria-label",(on?"暫停 ":"播放 ")+s.t);b.title=on?"暫停":"播放"+(y.s?"（從 "+Math.floor(y.s/60)+":"+String(y.s%60).padStart(2,"0")+" 開始）":"");
+  b.innerHTML=on?PAUSE_SVG:PLAY_SVG;b.onclick=e=>{e.stopPropagation();playSong(k,s)};return b}
+function loadYtApi(){if(ytApi)return ytApi;
+  ytApi=new Promise(res=>{window.onYouTubeIframeAPIReady=res;const sc=document.createElement("script");sc.src="https://www.youtube.com/iframe_api";document.head.append(sc)});return ytApi}
+async function playSong(k,s){
+  const y=board._yt[k];if(!y||!y.v)return;
+  if(ytCur===k&&ytPlayer){ytPlaying(k)?ytPlayer.pauseVideo():ytPlayer.playVideo();return}
+  ytCur=k;document.getElementById("ytNow").textContent=s.t+" — "+s.a.replace(/（[^）]*）/g,"");document.getElementById("ytMini").hidden=false;
+  await loadYtApi();
+  if(ytCur!==k)return;
+  if(ytPlayer)ytPlayer.loadVideoById({videoId:y.v,startSeconds:y.s||0});
+  else ytPlayer=new YT.Player("ytPlayer",{videoId:y.v,playerVars:{autoplay:1,start:y.s||0,playsinline:1,rel:0},
+    events:{onReady:e=>e.target.playVideo(),onStateChange:e=>{ytState=e.data;renderBoard()}}});
+  renderBoard();
+}
+function closePlayer(){if(ytPlayer)ytPlayer.stopVideo();ytCur=null;ytState=-1;document.getElementById("ytMini").hidden=true;renderBoard()}
+/* paste a YouTube link (with ?t= for the start) to choose what ▶ plays */
+function setYtSource(k,s){
+  const y=board._yt[k],cur=y&&y.v?"https://youtu.be/"+y.v+(y.s?"?t="+y.s:""):"";
+  const v=prompt("貼上「"+s.t+"」的 YouTube 網址（加上 ?t=秒數 可以指定從哪裡開始；留空就移除）",cur);
+  if(v===null)return;
+  if(!v.trim()){board._yt[k]={x:Date.now()};persist();render();return}
+  const m=v.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/)||v.trim().match(/^([\w-]{11})$/);
+  if(!m){alert("看不懂這個網址，請貼 YouTube 影片的網址");return}
+  const t=v.match(/[?&](?:t|start)=(?:(\d+)m)?(\d+)s?/);const sec=t?(+(t[1]||0))*60+ +t[2]:0;
+  board._yt[k]=Object.assign({v:m[1]},sec?{s:sec}:{},{t:Date.now()});
+  if(ytCur===k)ytCur=null;persist();render();
+}
 function openRowMenu(btn,k,s){
   const m=document.getElementById("rowMenu");
   if(menuBtn===btn&&Date.now()-menuClosedAt<300)return;  // the press on ⋮ already light-dismissed it: treat as a toggle
@@ -1302,7 +1364,10 @@ function openRowMenu(btn,k,s){
   [kk,yt].forEach(a=>{a.className="menu-i";a.setAttribute("role","menuitem");a.removeAttribute("title");a.onclick=()=>m.hidePopover()});
   const rm=el("button","menu-i danger");rm.type="button";rm.setAttribute("role","menuitem");rm.append(el("span","menu-x","×"),"從歌單移除");
   rm.onclick=()=>{m.hidePopover();move(k,null)};
-  m.append(kk,yt,rm);m.showPopover();menuBtn=btn;btn.setAttribute("aria-expanded","true");
+  const src=el("button","menu-i");src.type="button";src.setAttribute("role","menuitem");
+  src.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>';src.append(board._yt[k]&&board._yt[k].v?"更換播放來源":"設定播放來源");
+  src.onclick=()=>{m.hidePopover();setYtSource(k,s)};
+  m.append(kk,yt,src,rm);m.showPopover();menuBtn=btn;btn.setAttribute("aria-expanded","true");
   const r=btn.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
   let top=r.bottom+4;if(top+h>innerHeight-8)top=r.top-h-4;
   m.style.left=Math.max(8,Math.min(r.right-w,innerWidth-w-8))+"px";m.style.top=Math.max(8,top)+"px";
@@ -1318,6 +1383,7 @@ function setupRowMenu(){
     if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();it[(i+(e.key==="ArrowDown"?1:it.length-1))%it.length].focus()}});
 }
 setupRowMenu();
+document.getElementById("ytClose").onclick=closePlayer;
 let xOpen=false;try{xOpen=!!localStorage.getItem("wedding-x-open")}catch(_){}
 function renderBoard(){
   const wrap=document.getElementById("cols");wrap.replaceChildren();
@@ -1351,7 +1417,8 @@ function renderBoard(){
       mb.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="3.5" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.5" r="1.5"/></svg>';mb.onclick=()=>openRowMenu(mb,k,s);
       /* who picked it, then who likes it: [picker] ♥[liker] */
       let pk=el("span","picker-ph");if(who){pk=avatar(who,"picker");pk.title="由"+who+"挑選";pk.setAttribute("role","img");pk.setAttribute("aria-label","由"+who+"挑選")}
-      const acts=el("div","pick-acts");acts.append(pk,likeBtn(k,s.t),mb);
+      const acts=el("div","pick-acts");acts.append(pk,likeBtn(k,s.t),playBtn(k,s),mb);
+      if(ytCur===k)p.classList.add("playing");
       p.append(lg,tx,acts);ul.append(p)});
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
   });
