@@ -52,6 +52,11 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .head-share{grid-area:share;align-self:start;display:flex;align-items:center;gap:12px}
 .share-btn{appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--on-hong);background:var(--hong);border:1px solid var(--hong);border-radius:999px;padding:8px 18px;cursor:pointer;white-space:nowrap}
 .share-btn:hover{opacity:.9}
+.boards-pick{position:relative;display:inline-flex;min-width:0}
+.boards-pick select{appearance:none;-webkit-appearance:none;font:inherit;font-size:14px;font-weight:700;color:var(--hong);background:transparent;border:1px solid var(--hong);border-radius:999px;padding:8px 34px 8px 18px;cursor:pointer;max-width:220px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.boards-pick select:hover{background:color-mix(in srgb,var(--hong) 8%,transparent)}
+.boards-pick::after{content:"";position:absolute;right:16px;top:50%;width:6px;height:6px;border-right:2px solid var(--hong);border-bottom:2px solid var(--hong);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.boards-pick option{color:var(--ink);background:var(--card);font-weight:400}
 .people{display:flex;align-items:center}
 .avatar{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:14px;font-weight:700;color:var(--av-ink);box-shadow:inset 0 0 0 1px var(--av-ring);border:2px solid var(--paper);margin-left:-8px;flex:none;user-select:none}
 .people>.avatar:first-child,.people>.me:first-child .avatar{margin-left:0}
@@ -103,6 +108,7 @@ header.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-templ
 .ai-links{display:flex;gap:8px;margin-right:auto}
 .board-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 12px;overflow-wrap:anywhere;user-select:all}
 .share-row{display:flex;gap:8px}
+.board-h h2 .board-name{font:inherit;color:inherit;overflow-wrap:anywhere}
 .share-row input{flex:1;min-width:0}
 .dlg-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:6px}
 .dlg-actions .share-btn{margin-top:0}
@@ -233,6 +239,11 @@ body.is-dragging .col.over{border-color:var(--hong)}
 .col-n[data-ok="ok"]{color:var(--l-tw);font-weight:700}
 .col-n[data-ok="high"]{color:var(--warn);font-weight:700}
 .col-tag{appearance:none;border:0;background:transparent;color:var(--hong);font-size:12px;padding:0;cursor:pointer;margin-left:auto;text-decoration:underline;text-underline-offset:2px}
+.col-hide{appearance:none;border:0;background:transparent;color:var(--muted);font-size:12px;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.col-hide:hover{color:var(--ink)}
+.chip[hidden]{display:none}
+.hidden-cols{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 2px;font-size:13px;color:var(--muted)}
+.hidden-cols .chip{font-size:12px;padding:2px 10px}
 .col-n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .col-d{font-size:12px;color:var(--muted);flex-basis:100%}
 .col-list{display:flex;flex-direction:column;gap:4px}
@@ -361,6 +372,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
     </div>
     <div class="head-share" id="headShare" hidden>
       <div class="people" id="people" aria-label="正在看這份歌單的人"></div>
+      <span class="boards-pick"><select id="boardsSel" aria-label="切換歌單"></select></span>
       <button class="share-btn" id="shareBtn" type="button">分享歌單</button>
     </div>
   </header>
@@ -406,6 +418,8 @@ body.is-dragging .col.over{border-color:var(--hong)}
     <form method="dialog">
       <h2 id="shareTitle">分享歌單</h2>
       <p>把網址傳給另一半或婚顧，打開就能一起編輯這份歌單。</p>
+      <label for="shareName">歌單名稱</label>
+      <input id="shareName" type="text" maxlength="30" autocomplete="off" placeholder="例如：1025 婚宴">
       <label>歌單 ID</label>
       <code class="board-id" id="shareId"></code>
       <label for="shareUrl">網址</label>
@@ -416,6 +430,18 @@ body.is-dragging .col.over{border-color:var(--hong)}
       <div class="dlg-actions">
         <button class="chip" id="nativeShare" type="button" hidden>用其他 App 傳送</button>
         <button class="share-btn" value="close">完成</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="nick-dlg" id="boardsDlg" aria-labelledby="boardsTitle">
+    <form id="boardsForm">
+      <h2 id="boardsTitle">新增歌單</h2>
+      <label for="newBoardName">歌單名稱</label>
+      <input id="newBoardName" type="text" maxlength="30" autocomplete="off" placeholder="例如：歸寧宴" required>
+      <div class="dlg-actions">
+        <button class="chip" type="button" id="boardsClose">取消</button>
+        <button class="share-btn" type="submit">建立</button>
       </div>
     </form>
   </dialog>
@@ -446,7 +472,7 @@ body.is-dragging .col.over{border-color:var(--hong)}
     <button class="chip add-custom add-custom-board" id="addCustomBoard" type="button">＋ 自訂歌曲</button>
     <aside class="board" aria-label="我的婚禮歌單">
       <div class="board-h">
-        <h2>我的婚禮歌單 <span id="boardCount"></span></h2>
+        <h2><span class="board-name" id="boardName">我的婚禮歌單</span> <span id="boardCount"></span></h2>
         <span class="sync" id="sync"></span>
       </div>
       <div class="cols" id="cols"></div>
@@ -510,7 +536,7 @@ const SONGS=[
 {t:"Love Someone",kk:"CrFlvAVBa7_3PM8uS8",a:"Lukas Graham",y:2018,l:"英語",s:["B","C"],p:"慢",st:"經典",m:"描寫愛一個人、也被愛著的感覺，這樣的愛會讓人變成更好的人。",w:"台灣婚禮網站推薦的送客曲，溫暖又會讓人感動。",yt:"dN44xpHjNxE"},
 {t:"Home",kk:"8kZJkWUIsZ01MOuT59",a:"Edward Sharpe & the Magnetic Zeros",y:2009,l:"英語",s:["B","C"],p:"中",st:"經典",m:"男女對唱，說只要和對方在一起，哪裡都是家。",w:"國外婚禮前十名常客，氣氛歡樂溫馨，適合送客。",yt:"4306i99LMXo"},
 {t:"Signed, Sealed, Delivered I'm Yours",a:"Stevie Wonder",y:1970,l:"英語",s:["06","10","11","C"],p:"快",st:"經典",m:"唱的人承認過去做錯過事，現在下定決心回到心愛的人身邊，把自己完整交給對方。",w:"經典的 Motown 歡樂曲，很常用在退場。",c:"歌詞有一點和好、認錯的成分，整體仍然是正面的。",yt:"pUj9frKY46E"},
-{t:"You Raise Me Up",kk:"GmExoAWj7q4F5d4CoN",a:"Josh Groban（Westlife 版亦常用）",y:2003,l:"英語",s:["00","01"],p:"慢",st:"經典",m:"唱的人感謝在自己低潮時一直支持自己的人，因為有對方，自己才能變得更堅強、走得更遠。",w:"華人很熟悉的感恩歌，非常適合感謝父母。",yt:"aJxrX42WcjQ"},
+{t:"You Raise Me Up",kk:"GmExoAWj7q4F5d4CoN",a:"Josh Groban（Westlife 版亦常用）",y:2003,l:"英語",s:["00","F","01"],p:"慢",st:"經典",m:"唱的人感謝在自己低潮時一直支持自己的人，因為有對方，自己才能變得更堅強、走得更遠。",w:"華人很熟悉的感恩歌，非常適合感謝父母。",yt:"aJxrX42WcjQ"},
 {t:"I Hope You Dance",kk:"9ZAuy5gus_ZpEeKAnS",a:"Lee Ann Womack",y:2000,l:"英語",s:["00"],p:"慢",st:"經典",m:"像父母寫給孩子的祝福，希望孩子保有好奇心、勇敢面對選擇，人生中不要錯過任何機會。",w:"國外常用在親子舞，表達父母的祝福。",yt:"RV-Z1YwaOiw"},
 {t:"In My Daughter's Eyes",kk:"CrAH4XQRa7_3NzAkwA",a:"Martina McBride",y:2003,l:"英語",s:["00","03"],p:"慢",st:"經典",m:"母親說從女兒的眼中看見了希望和愛，也因此變成更好的自己。",w:"很適合新娘和父母的感恩橋段。",c:"用母親的角度唱，配新娘家的段落最合適。",yt:"M2SDMOrTZ8U"},
 {t:"Isn't She Lovely",kk:"Oq6kVL7fMMmVdYyXGo",a:"Stevie Wonder",y:1976,l:"英語",s:["00"],p:"中",st:"經典",m:"Stevie Wonder 為剛出生的女兒寫的歌，表達迎接新生命的喜悅和感恩。",w:"很適合配新娘從小到大的成長照片。",yt:"oE56g61mW44"},
@@ -522,14 +548,14 @@ const SONGS=[
 {t:"This Will Be (An Everlasting Love)",kk:"H-b4gdm6CJ6qwceM8A",a:"Natalie Cole",y:1975,l:"英語",s:["06","08","10"],p:"快",st:"經典",m:"歌者開心宣告兩人的愛會永遠持續，每一天都想緊緊抱住對方。",w:"切蛋糕歌單把它列為熱門的愛情歌曲，曲風明亮又喜氣。",src:"https://www.fixthemusic.com/blog/wedding-cake-cutting-songs",yt:"sR85q5jmu20"},
 {t:"Lovely Day",kk:"KotfwQehP2VFu8i4es",a:"Bill Withers",y:1977,l:"英語",s:["04","08","A"],p:"中",st:"經典",m:"歌者說就算醒來時一切不順，只要看到對方，一天就會變得美好。",w:"婚禮歌單推薦它用在進場、退場或宴會開場。",src:"https://www.myweddingsongs.com/weddingblog/bill-withers-songs",yt:"bEeaS6fuUoA"},
 {t:"Celebration",kk:"KsVL9Iw3fpSTQVeksg",a:"Kool & the Gang",y:1980,l:"英語",s:["04","06","11","12"],p:"快",st:"經典",m:"這首歌邀請大家一起來慶祝、一起享受美好時光。整首歌充滿派對與歡聚的氣氛。",w:"婚禮進場歌單稱它是最直接的選擇，因為歌名就說明了「我們在慶祝」。",src:"https://www.theknot.com/content/celebration-songs",yt:"3GwjfUFyY6M"},
-{t:"Endless Love",kk:"-sZMMJtDgs1-CVewr1",a:"Lionel Richie & Diana Ross",y:1981,l:"英語",s:["01","05","07"],p:"慢",st:"經典",m:"男女對唱，說對方是自己生命中的唯一，兩人要一起守護一份沒有盡頭的愛。",w:"八〇年代婚禮歌單把它列為代表性的抒情對唱，長輩也熟悉。",src:"https://www.myweddingsongs.com/weddingblog/80s-love-songs-top-17/",yt:"eT1nWfcbCIo"},
+{t:"Endless Love",kk:"-sZMMJtDgs1-CVewr1",a:"Lionel Richie & Diana Ross",y:1981,l:"英語",s:["F","01","05","07"],p:"慢",st:"經典",m:"男女對唱，說對方是自己生命中的唯一，兩人要一起守護一份沒有盡頭的愛。",w:"八〇年代婚禮歌單把它列為代表性的抒情對唱，長輩也熟悉。",src:"https://www.myweddingsongs.com/weddingblog/80s-love-songs-top-17/",yt:"eT1nWfcbCIo"},
 {t:"Walking on Sunshine",kk:"8tYu03fDsnPsF-KXc9",a:"Katrina and the Waves",y:1985,l:"英語",s:["09","10","11"],p:"快",st:"經典",m:"歌者因為確定被對方愛著而開心得像走在陽光裡，迫不及待要跟大家分享好心情。",w:"多份捧花拋擲歌單都列入這首歌，節奏輕快，一下就能炒熱氣氛。",src:"https://www.weddingwire.ca/wedding-ideas/the-top-25-bouquet-toss-songs--c255",yt:"iPUmE-tne5U"},
 {t:"Glory of Love",kk:"TZoE_O8AH5GcPDjnBb",a:"Peter Cetera",y:1986,l:"英語",s:["02","05","07"],p:"慢",st:"經典",m:"男方承諾會一直守護對方，願意為了這份愛挺身而出，兩人一起實現共同的夢想。",w:"八〇年代婚禮慢歌清單收錄這首歌，歌詞帶有守護的承諾。",src:"https://www.myweddingsongs.com/weddingblog/80s-love-songs-top-17/",yt:"1eQWdpWjXlk"},
 {t:"I Swear",kk:"GsMXqMRUZ-QUYH0xyl",a:"All-4-One",y:1994,l:"英語",s:["02","05","07"],p:"慢",st:"經典",m:"歌者發誓不論順境逆境都會陪在對方身邊，年紀漸長也會一樣愛她，像是一段誓詞。",w:"被稱為九〇年代經典，很多新人在交換誓言時選用。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/",yt:"25rL-ooWICU"},
 {t:"Truly Madly Deeply",kk:"SsGnaAavDXYxYl4Hfw",a:"Savage Garden",y:1997,l:"英語",s:["03","05","07"],p:"慢",st:"經典",m:"歌者想成為對方的依靠，用全心全意的愛陪她一起實現願望。",w:"九〇年代婚禮情歌清單常列入這首歌。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/",yt:"WQnAxOQxQIU"},
 {t:"From This Moment On",kk:"Or4G0CUVf78HV3FKHq",a:"Shania Twain",y:1998,l:"英語",s:["03","04","05"],p:"慢",st:"經典",m:"從這一刻起，兩人要牽著手一起走下去，願意為對方付出一切，生命從此有了完整的意義。",w:"婚禮歌單形容它是承諾永恆之愛的對唱，常用於典禮與切蛋糕。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/",yt:"a-Lp2uC_1lg"},
 {t:"Amazed",kk:"Cm9hqR1VtBWGou2V_u",a:"Lonestar",y:1999,l:"英語",s:["03","05","07"],p:"慢",st:"經典",m:"歌者對另一半的每一個小細節都感到驚喜，越相處越深愛，想一輩子這樣愛下去。",w:"它曾是登上排行冠軍的鄉村歌曲，被列為頂尖的第一支舞歌曲。",c:"有少數描寫親密感官的字句，但很含蓄。",src:"https://www.myweddingsongs.com/weddingblog/1990s-wedding-songs/",yt:"x-skFgrV59A"},
-{t:"Bless the Broken Road",kk:"L_X95imZ_NyBrexLQs",a:"Rascal Flatts",y:2004,l:"英語",s:["01","03","05"],p:"慢",st:"經典",m:"歌者感謝過去走過的曲折路，因為每一步都帶他走向現在的伴侶，覺得這段相遇是上天的安排。",w:"二〇〇〇年代婚禮歌單稱它是新娘進場與典禮的熱門選擇。",c:"歌詞提到過去曾經心碎，但重點在感恩遇見彼此。",src:"https://www.myweddingsongs.com/weddingblog/best-love-songs-of-the-2000s-top-20/",yt:"FaQHyHwFgeg"},
+{t:"Bless the Broken Road",kk:"L_X95imZ_NyBrexLQs",a:"Rascal Flatts",y:2004,l:"英語",s:["F","01","03","05"],p:"慢",st:"經典",m:"歌者感謝過去走過的曲折路，因為每一步都帶他走向現在的伴侶，覺得這段相遇是上天的安排。",w:"二〇〇〇年代婚禮歌單稱它是新娘進場與典禮的熱門選擇。",c:"歌詞提到過去曾經心碎，但重點在感恩遇見彼此。",src:"https://www.myweddingsongs.com/weddingblog/best-love-songs-of-the-2000s-top-20/",yt:"FaQHyHwFgeg"},
 {t:"Better Together",kk:"GnYvzRnWJNIVKrvoVi",a:"Jack Johnson",y:2005,l:"英語",s:["07","A","B"],p:"中",st:"經典",m:"歌者說生活中的大小事，兩個人一起經歷才最好。他想把共同的回憶慢慢說成故事。",w:"從 Spotify 婚禮歌單統計出的熱門婚禮歌曲排行收錄了這首歌。",c:"和 Luke Combs 2020 年的同名歌曲不同，選歌時要注意版本。",src:"https://washingtonian.com/2022/08/18/heres-an-unofficial-list-of-the-99-most-popular-wedding-songs-right-now",yt:"seZMOTGCDag"},
 {t:"You and Me",kk:"TZgQ9-_wH5GcPfs4Kf",a:"Lifehouse",y:2005,l:"英語",s:["03","05","07"],p:"慢",st:"經典",m:"在忙亂的世界裡，歌者眼中只有對方。兩個人在一起時，好像時間都停了下來。",w:"主唱為妻子寫了這首歌，後來成為最受歡迎的第一支舞歌曲之一，還推出了婚禮版。",src:"https://en.wikipedia.org/wiki/You_and_Me_(Lifehouse_song)",yt:"ac3HkriqdGQ"},
 {t:"Then",kk:"P-98a1F2hnTeMMwjzS",a:"Brad Paisley",y:2009,l:"英語",s:["00","05","07"],p:"慢",st:"經典",m:"歌者回顧兩人從相識、相戀到求婚，每次以為已經愛到極點，後來都愛得更深。",w:"被稱為近二十年最受歡迎的鄉村婚禮歌之一，歌詞按時間回顧兩人走過的路，很適合配成長影片。",src:"https://www.myweddingsongs.com/weddingblog/brad-paisley-love-songs-for-weddings/",yt:"81on1ZFE63w"},
@@ -538,7 +564,7 @@ const SONGS=[
 {t:"Can't Stop the Feeling!",kk:"TY__pWtFGziN5K0fA6",a:"Justin Timberlake",y:2016,l:"英語",s:["04","10","11","12"],p:"快",st:"近年流行",m:"歌者說心裡的快樂停不下來，邀請大家一起跳舞，享受當下的好心情。",w:"婚禮進場歌單推薦它，說從花童到阿嬤都會喜歡。",src:"https://greenweddingshoes.com/best-wedding-party-entrance-songs/",yt:"ru0K8uYEZWw"},
 {t:"Speechless",kk:"OpRweGKgzUmSZw2rYW",a:"Dan + Shay",y:2018,l:"英語",s:["03","05","07"],p:"慢",st:"近年流行",m:"新郎看到新娘的那一刻感動得說不出話，形容她美得讓人屏息。",w:"兩位成員以自己婚禮當天的感受寫成，MV 用的也是兩人的婚禮影像。",src:"https://wiov.com/2018/05/18/dan-shay-release-wedding-song-of-the-summer-speechless-watch-new-video",yt:"o_bIMTtl8X8"},
 {t:"Nobody But You",a:"Blake Shelton & Gwen Stefani",y:2020,l:"英語",s:["04","05","07"],p:"慢",st:"近年流行",m:"男女對唱，說彼此是此生唯一想要的人，不想和別人共度人生。",w:"2020 年新婚禮歌推薦清單收錄這首歌，演唱的兩人後來也結婚了。",src:"https://www.myweddingsongs.com/weddingblog/2020-wedding-songs/",yt:"4h9o0Gujuoc"},
-{t:"Better Together",kk:"Okeo37fXwySdLtzguc",a:"Luke Combs",y:2020,l:"英語",s:["01","07","B"],p:"慢",st:"近年流行",m:"歌者列舉生活中天生一對的事物，用來比喻自己和伴侶也是彼此最好的搭配。",w:"2020 年新婚禮歌推薦清單收錄這首歌，曲風溫和，長輩也容易接受。",c:"和 Jack Johnson 的同名歌曲不同，選歌時要注意版本。",src:"https://www.myweddingsongs.com/weddingblog/2020-wedding-songs/",yt:"eM8K-OIBsEs"},
+{t:"Better Together",kk:"Okeo37fXwySdLtzguc",a:"Luke Combs",y:2020,l:"英語",s:["F","01","07","B"],p:"慢",st:"近年流行",m:"歌者列舉生活中天生一對的事物，用來比喻自己和伴侶也是彼此最好的搭配。",w:"2020 年新婚禮歌推薦清單收錄這首歌，曲風溫和，長輩也容易接受。",c:"和 Jack Johnson 的同名歌曲不同，選歌時要注意版本。",src:"https://www.myweddingsongs.com/weddingblog/2020-wedding-songs/",yt:"eM8K-OIBsEs"},
 {t:"Golden Hour",kk:"0lBDf14Hs1XUcYVRnG",a:"JVKE",y:2022,l:"英語",s:["00","03","07"],p:"中",st:"近年流行",m:"歌者把對方比作黃昏時金色的陽光，讚嘆她的美讓自己看得出神。",w:"被稱為 2022 到 2023 年最具代表性的新婚禮歌，常用於典禮與第一支舞。",src:"https://thedjsg.com/2025/01/top-11-wedding-songs-of-2024/",yt:"PEM0Vs8jf1w"},
 {t:"Wildflowers and Wild Horses",kk:"PZgv9dTFfVd6i23l2b",a:"Lainey Wilson",y:2024,l:"英語",s:["09","A"],p:"中",st:"近年流行",m:"女性自述自己既堅強又溫柔，像野花和野馬一樣自由，不受拘束，展現自信的個性。",w:"2025 年婚禮歌單推薦它用在伴娘進場或捧花拋擲。",c:"這不是情歌，比較適合放在活潑的環節。",src:"https://www.myweddingsongs.com/weddingblog/wedding-songs-2025/",yt:"kvfHSKojdiI"},
 {t:"The Vow",kk:"4psBmEThiO7N7AL5pe",a:"Ed Sheeran",y:2025,l:"英語",s:["03","05","07"],p:"慢",st:"近年流行",m:"歌者向伴侶許下誓言，承諾會一直愛她，不放開她的手。",w:"收錄在 2025 年專輯《Play》，被認為延續了〈Perfect〉的風格，是新的第一支舞熱門歌。",c:"這是新歌，長輩可能不熟悉。",src:"https://www.myweddingsongs.com/weddingblog/wedding-songs-2025/",yt:"GWaTI0AINMc"},
@@ -547,9 +573,9 @@ const SONGS=[
 {t:"炮仔聲",kk:"1a3dlAwX0t4rziMEE9",a:"江蕙",y:2005,l:"台語",s:["00","03"],p:"慢",st:"經典",m:"從新娘的角度寫，在喜炮聲中準備出嫁。她想起爸爸那雙粗手把自己拉拔長大，牽著她走上紅毯，捨不得離開，眼淚塞在喉嚨說不出謝謝。最後叮嚀爸媽保重身體，自己和另一半會「兩人四腳」一起打拚、白頭到老。",w:"專為婚禮寫的台語經典，幾乎每份台語婚禮歌單都會列進感謝父母段落。",c:"非常催淚，而且是女兒視角，適合新娘拜別或感謝父母影片。",yt:"cyhvz638Ve8"},
 {t:"給女兒",kk:"Cl13Ce9oFKtg1SLsKY",a:"滅火器 Fire EX.",y:2023,l:"台語",s:["00","03"],p:"中",st:"近年流行",m:"從爸爸的角度寫：女兒好像一眨眼就長大穿上婚紗，雖然捨不得還是得放手。他開玩笑叫女婿「猴囡仔」，叮嚀兩人要互相體諒、輪流洗碗、一起打拚，最後說最愛女兒的人永遠是爸爸。",w:"近年最受歡迎的「爸爸視角」台語婚禮歌，婚禮紀錄部落格和 Threads 上的新人歌單都常推薦。",c:"歌曲開頭和中段有小女孩的對話錄音。唱片公司有開放婚禮使用授權，使用前可先向唱片公司申請。",yt:"ETmiY7ARkL4"},
 {t:"手紙",kk:"8sX9U61NV0Zqk5-pa4",a:"吳申梅",y:2012,l:"台語",s:["00"],p:"慢",st:"經典",m:"子女很小就離家打拚，想起爸媽每天問「吃飽沒、會不會冷」的關心。平常說不出口的感謝，就寫成一封信，請爸媽仔細看，並祝他們保重身體、每天快樂。",w:"WeddingDay 等婚禮網站列為感謝父母的溫馨台語歌。",c:"結尾有「下輩子再當你們的寶貝」這類來世的意象，比較感傷。介意的話可以只剪前段使用。",yt:"uNYdHr1uUiI"},
-{t:"七老八十",kk:"4rG2MowgSSJLqckxHO",a:"江蕙",y:2015,l:"台語",s:["01","04","B"],p:"中",st:"經典",m:"有你陪伴就安心，柴米油鹽、煮飯洗衫都甘願。等兩人慢慢老了、耳朵變重、頭髮變白，還是要愛你愛到七老八十，感情像燒酒一樣越陳越香，手要牽一輩子。",w:"歌詞完全在講白頭偕老，又是江蕙的作品，長輩接受度高，婚禮歌單常見。",yt:"r-3qtSWkfTA"},
+{t:"七老八十",kk:"4rG2MowgSSJLqckxHO",a:"江蕙",y:2015,l:"台語",s:["F","01","04","B"],p:"中",st:"經典",m:"有你陪伴就安心，柴米油鹽、煮飯洗衫都甘願。等兩人慢慢老了、耳朵變重、頭髮變白，還是要愛你愛到七老八十，感情像燒酒一樣越陳越香，手要牽一輩子。",w:"歌詞完全在講白頭偕老，又是江蕙的作品，長輩接受度高，婚禮歌單常見。",yt:"r-3qtSWkfTA"},
 {t:"牽阮的手",kk:"PadQ9BiaWKr82flhwO",a:"蔡幸娟（原唱）／蘇打綠（翻唱）",y:2004,l:"台語",s:["04","05","A"],p:"慢",st:"經典",m:"「牽阮的手、走咱的路」，兩人牽著手在小雨中同行，就算路上有風有雨也甘願一起吃苦，盼望和對方白頭偕老。",w:"老歌由年輕歌手重新翻唱，蘇打綠版本在婚禮部落格中很受推薦，適合莊重浪漫的進場。",yt:"02qfIv9koQU"},
-{t:"一支小雨傘",kk:"4tuS2DNYLX0lHKZ3U4",a:"洪榮宏",y:1982,l:"台語",s:["01","07","A","B"],p:"中",st:"經典",m:"兩人一起撐一支小雨傘，雨越大「我來照顧你、你來照顧我」。小路就算坎坷難走也小心同行，淋得濕答答心情還是很快活。",w:"老少都會唱的國民台語情歌，歌詞象徵夫妻互相扶持，長輩一聽就有感。",yt:"5_eXogZgr48"},
+{t:"一支小雨傘",kk:"4tuS2DNYLX0lHKZ3U4",a:"洪榮宏",y:1982,l:"台語",s:["F","01","07","A","B"],p:"中",st:"經典",m:"兩人一起撐一支小雨傘，雨越大「我來照顧你、你來照顧我」。小路就算坎坷難走也小心同行，淋得濕答答心情還是很快活。",w:"老少都會唱的國民台語情歌，歌詞象徵夫妻互相扶持，長輩一聽就有感。",yt:"5_eXogZgr48"},
 {t:"愛情限時批",kk:"Wn7faUMDwvj1xnKDBt",a:"伍佰 & 萬芳",l:"台語",s:["00","A"],p:"中",st:"經典",m:"心裡愛著對方卻害羞說不出口，見面就低頭不敢講話，只好寫一封愛情的「限時批」（限時信），表達對方的溫柔、可愛讓自己深深陷入情海。",w:"經典男女對唱，婚禮網站的台語對唱清單常見，適合戀愛故事影片。",yt:"JJhlRIN90YY"},
 {t:"咱結婚好嗎？",kk:"4kLCN-0_WkaL-SVdg7",a:"蕭煌奇 & 安心亞",y:2017,l:"台語",s:["05","10"],p:"中",st:"經典",m:"回憶兩人散步、吃麵線糊的甜蜜日常。男方直接求婚：「Honey 咱結婚好嗎」，承諾會打拚照顧對方。女方回答「我欲嫁乎你啦」，兩人一起走上愛情路。",w:"多家婚禮網站推薦為二進或新人表演的首選台語對唱，Threads 新人歌單也常出現。",yt:"vsTfaAShh2Q"},
 {t:"一人水一項",kk:"4qr-1_5MWUFovvAvPe",a:"任家萱 Selina & 蕭煌奇",y:2015,l:"台語",s:["08","10","C"],p:"快",st:"經典",m:"「一人水一項」意思是每個人都有自己的美。歌詞講情侶接納彼此的不完美，多看對方的優點，「互相勿棄嫌」，兩人同心就是最浪漫的事。",w:"輕快的台語對唱，常被用在二進或用餐帶動氣氛。",yt:"mAF0rLDssDw"},
@@ -564,7 +590,7 @@ const SONGS=[
 {t:"幸福的條件",kk:"4qlJBt2MWUFouc_Bxh",a:"杜忻恬 & 郭忠祐",y:2018,l:"台語",s:["00","B"],p:"中",st:"經典",m:"前面的路就算起風沙、要翻山越嶺也不害怕，因為「你是阮幸福的條件」，沒有人能取代。愛是用真心交換的，對對方的情意不會改變。",w:"婚禮網站推薦的復古風可愛台語對唱。",yt:"Eavz17q5g2Y"},
 {t:"嫁給我吧",kk:"4nRIu3143TYuqrVPEF",a:"玖壹壹",y:2015,l:"台語",s:["02","10","11","C"],p:"快",st:"近年流行",m:"男方向心愛的人求婚，已經跟岳父喝過三杯。承諾會煮飯洗衫、初一十五拜對方的祖先、買大房子，生了孩子他來帶，保證嫁給他一定好命。",w:"Threads 和婚禮部落格的新人歌單常見，台語加嘻哈的輕快風格適合年輕賓客。",c:"歌詞有「林北」等很口語的用詞，長輩多的場合請自行斟酌。",yt:"UapMQdq0NB4"},
 {t:"四季紅",a:"純純、艷艷（原唱）",y:1938,l:"台語",s:["10","A","B"],p:"中",st:"經典",m:"一對戀人從春天唱到冬天，每一段都想開口說心事，又有點害羞。四季的景色都用「紅」來比喻愈來愈熱的感情。",w:"PTT 新人分享的台語婚宴歌單把它排在用餐音樂（民謠純音樂版）。",c:"歌詞是男女調情對唱，風格很老派，建議用純音樂版當背景。",src:"https://www.ptt.cc/bbs/GetMarry/M.1473498204.A.C4B.html",yt:"UEOARk7Kh0g"},
-{t:"搖嬰仔歌",a:"呂泉生（曲）／盧雲生（詞）",y:1945,l:"台語",s:["00","01","07"],p:"慢",st:"經典",m:"父母搖著孩子入睡，盼他一暝大一寸。歌詞從養育、讀書一路唱到孩子成家，父母這才放心。",w:"婚禮歌單把它列在成長 MV 和謝親恩用曲，歌詞直接唱到子女嫁娶。",c:"曲調偏感傷，適合溫情段落，不適合歡樂環節。",src:"https://zoeyhsu.wordpress.com/2017/12/08/%E6%88%91%E5%80%91%E7%9A%84%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%EF%BC%8C%E8%B6%85%E6%9C%89fu%EF%BC%8C%E7%B5%95%E5%B0%8D%E8%A8%8E%E5%96%9C%E7%9A%84%E7%B2%BE%E9%81%B818%E9%A6%96%E5%88%86%E4%BA%AB/",yt:"_bYh_qDYtmE"},
+{t:"搖嬰仔歌",a:"呂泉生（曲）／盧雲生（詞）",y:1945,l:"台語",s:["00","F","01","07"],p:"慢",st:"經典",m:"父母搖著孩子入睡，盼他一暝大一寸。歌詞從養育、讀書一路唱到孩子成家，父母這才放心。",w:"婚禮歌單把它列在成長 MV 和謝親恩用曲，歌詞直接唱到子女嫁娶。",c:"曲調偏感傷，適合溫情段落，不適合歡樂環節。",src:"https://zoeyhsu.wordpress.com/2017/12/08/%E6%88%91%E5%80%91%E7%9A%84%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%EF%BC%8C%E8%B6%85%E6%9C%89fu%EF%BC%8C%E7%B5%95%E5%B0%8D%E8%A8%8E%E5%96%9C%E7%9A%84%E7%B2%BE%E9%81%B818%E9%A6%96%E5%88%86%E4%BA%AB/",yt:"_bYh_qDYtmE"},
 {t:"心肝寶貝",kk:"X_YqEb1-xGbE4nakVc",a:"鳳飛飛",y:1991,l:"台語",s:["00","03","07"],p:"慢",st:"經典",m:"父母看著寶貝孩子出生、收涎、學走路，一路把他捧在手心。心裡盼孩子聰明、健康，快快長大。",w:"PTT 婚禮台語歌單把它列在「訴說親情」，也是常見的成長 MV 用曲。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html",yt:"ajbfxPnpInU"},
 {t:"雙人枕頭",a:"王識賢",y:1991,l:"台語",s:["08","10","B"],p:"中",st:"經典",m:"用雙人枕頭、厚棉被比喻：身邊少了你就會孤單、畏寒。唱的人說對方是自己生命的溫泉、靈魂的另一半，為對方什麼苦都願意擔。",w:"介紹文章提到它在婚宴喜慶上是炒熱氣氛、表達情意的必點男女對唱。",src:"https://uptogo.com.tw/%E5%A8%9B%E6%A8%82/%E5%90%8D%E4%BA%BA/%E9%9B%99%E4%BA%BA%E6%9E%95%E9%A0%AD%E5%8E%9F%E5%94%B1%E6%98%AF%E8%AA%B0%EF%BC%9F/",yt:"mAY61EhWeEE"},
 {t:"愛你到350歲",kk:"KqyTlbiB3UapHiZixX",a:"黃乙玲",y:1998,l:"台語",s:["08","09","10"],p:"快",st:"經典",m:"女生打扮好去約會，覺得終於遇到人生知己。她大方說要和對方相愛到 350 歲、到白頭。",w:"PTT 婚禮台語歌單把它列在「輕快獨唱篇」。",c:"有一句帶過過去的情史，只是輕描淡寫。",src:"https://www.ptt.cc/bbs/GetMarry/M.1410178688.A.425.html",yt:"YLmd1tl6xDI"},
@@ -580,7 +606,7 @@ const SONGS=[
 {t:"姻緣天註定",kk:"Wp_27PebaMOw8hSvYO",a:"郭婷筠 & 蔡佳麟",y:2014,l:"台語",s:["06","09","10"],p:"快",st:"經典",m:"男女對唱感謝月老牽線，說兩人的緣分是天註定。婚後你煮飯我洗碗，配偶欄寫著你的名字，從此每天準時回家。",w:"PTT 新人分享的台語婚宴歌單把它列在迎賓歌曲。",c:"台語為主，夾幾句華語。",src:"https://www.ptt.cc/bbs/GetMarry/M.1473498204.A.C4B.html",yt:"0qVhHCqQlyE"},
 {t:"歡喜來恰恰",a:"金四喜",y:2015,l:"台語",s:["06","08","11","12"],p:"快",st:"近年流行",m:"音樂一下大家就跳恰恰，把酒斟滿、一起熱鬧。歌詞叫大家放開心胸、跟著節奏動起來。",w:"婚禮網站說這首能把現場氣氛帶到最高點，它也是電影《大喜臨門》的主題曲。",src:"https://www.storywed.com.tw/column_detail/349",yt:"dOoOiJf7Gqw"},
 {t:"牽手的幸福",kk:"8mzw8kJwJRsanVS2e4",a:"黃文星",y:2016,l:"台語",s:["02","04"],p:"中",st:"近年流行",m:"從一場西北雨想起兩人一路走來的感情，有酸有苦，但有你就快樂。男生承諾保護、照顧對方，同心走未來的路。",w:"婚禮文章形容它根本是為新郎進場量身打造的主題曲。",src:"https://www.marry.com.tw/topic/3136",yt:"1eaW37312Hg"},
-{t:"感謝",kk:"8sbLlg09V0Zqn2-rCZ",a:"曹雅雯",y:2017,l:"台語",s:["01","07"],p:"慢",st:"近年流行",m:"分別描寫媽媽風雨無阻的照顧、爸爸默默扛起整個家。孩子輕聲說謝謝，換自己當父母的靠山。",w:"weddings.tw 台語婚禮歌單把它列在感謝家人段落。",src:"https://www.weddings.tw/%E5%8F%B0%E5%AE%A2%E9%A2%A8%E5%8F%B0%E8%AA%9E%E5%A9%9A%E7%A6%AE%E9%9F%B3%E6%A8%82%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%E6%8E%A8%E8%96%A6/",yt:"qQudrt5vXhg"},
+{t:"感謝",kk:"8sbLlg09V0Zqn2-rCZ",a:"曹雅雯",y:2017,l:"台語",s:["F","01","07"],p:"慢",st:"近年流行",m:"分別描寫媽媽風雨無阻的照顧、爸爸默默扛起整個家。孩子輕聲說謝謝，換自己當父母的靠山。",w:"weddings.tw 台語婚禮歌單把它列在感謝家人段落。",src:"https://www.weddings.tw/%E5%8F%B0%E5%AE%A2%E9%A2%A8%E5%8F%B0%E8%AA%9E%E5%A9%9A%E7%A6%AE%E9%9F%B3%E6%A8%82%E5%A9%9A%E7%A6%AE%E6%AD%8C%E5%96%AE%E6%8E%A8%E8%96%A6/",yt:"qQudrt5vXhg"},
 {t:"無夠撒嬌",kk:"8ow9yNoglULSBTCdsi",a:"張三李四",y:2017,l:"台語",s:["02","09","10"],p:"快",st:"近年流行",m:"男生被女友迷得暈頭轉向，嘴上抱怨她有時很兇，其實甘之如飴。他說願意隨傳隨到，把她當女王寵，只希望她多撒嬌一點。",w:"婚禮樂團把它列入台語婚禮對唱推薦，說它適合當眾告白。",c:"有一些口語玩笑話，風格比較俏皮。",src:"https://liveband.clown.com.tw/2024-wedding-music.html",yt:"hd9ZtT4u-OI"},
 {t:"佮你牽手",kk:"8qsbRgJcYrrZPRFB2R",a:"李婭莎 & 蕭煌奇",y:2020,l:"台語",s:["04","05","06"],p:"中",st:"近年流行",m:"男女對唱：男生承諾讓對方依靠，女生把心交給他。兩人相信牽手走下去，幸福會一路陪著。",w:"StoryWed 和 weddings.tw 的台語婚禮對唱推薦都收錄這首。",src:"https://www.storywed.com.tw/column_detail/349",yt:"Nc3y56RLpf8"},
 {t:"惜你每一天",kk:"CkmXgOlanNz69O6dDX",a:"洪榮宏 & 陳嘉樺",y:2021,l:"台語",s:["04","06","08"],p:"中",st:"近年流行",m:"感謝月老幫忙，讓兩人相識、結成雙。人生最美的願望，就是每天愛你、疼你，牽手到永遠。",w:"StoryWed 和 weddings.tw 的台語婚禮對唱推薦都收錄這首。",src:"https://www.storywed.com.tw/column_detail/349",yt:"RGxmxzunOo8"},
@@ -596,20 +622,20 @@ const SONGS=[
 {t:"CAN YOU CELEBRATE?",a:"安室奈美恵",y:1997,l:"日語",s:["04","05"],p:"慢",st:"經典",m:"歌詞在問對方「能不能一起慶祝、一起擁抱」，向對方許下要在一起一輩子的愛的誓言。",w:"日本婚禮入場曲的不敗經典，至今仍在各大入場曲排行榜上。",yt:"iW-RlcnWb7A"},
 {t:"Wherever you are",kk:"KsYgA8kXfpSTQBUFdL",a:"ONE OK ROCK",y:2010,l:"日語",s:["02","04","05"],p:"慢",st:"經典",m:"日英混合的情歌，說不管你在哪裡，我都會在你身邊，並承諾要一直守護、愛著對方。",w:"台灣新人在 Dcard、Threads 上很常推的日文婚禮歌，原本就是為團員婚禮寫的。",c:"歌詞中英文段落不少。",yt:"qs4Q4cQxyU4"},
 {t:"One Love",kk:"GkpBxpwunSw3RzKiqN",a:"嵐",y:2008,l:"日語",s:["04","05"],p:"中",st:"經典",m:"電影《花樣男子 Final》的主題曲，歌詞講要把唯一的一份愛獻給對方，一百年後也會愛著你。",w:"2026 年日本婚禮入場曲排行第 2 名。",yt:"XswwGN-eIs0"},
-{t:"アイノカタチ feat. HIDE (GReeeeN)",kk:"_ZQU-_yFncpGPnIz5i",z:"愛的形狀",a:"MISIA",y:2018,l:"日語",s:["01","04","05"],p:"慢",st:"經典",m:"歌詞說愛沒有固定的形狀，是兩人一起度過的日子慢慢累積出來的，想跟對方一起把這份愛延續下去。",w:"2026 年日本婚禮歌曲總排行第 6 名，進場和讀信段落都很常用。",yt:"IX87le_EokM"},
+{t:"アイノカタチ feat. HIDE (GReeeeN)",kk:"_ZQU-_yFncpGPnIz5i",z:"愛的形狀",a:"MISIA",y:2018,l:"日語",s:["F","01","04","05"],p:"慢",st:"經典",m:"歌詞說愛沒有固定的形狀，是兩人一起度過的日子慢慢累積出來的，想跟對方一起把這份愛延續下去。",w:"2026 年日本婚禮歌曲總排行第 6 名，進場和讀信段落都很常用。",yt:"IX87le_EokM"},
 {t:"Love so sweet",kk:"HXxdnnc4aXJ8aoP51V",a:"嵐",y:2007,l:"日語",s:["06","10","12"],p:"快",st:"經典",m:"日劇《花樣男子 2》的主題曲，描寫戀愛中甜蜜閃亮的心情，相信這份愛會把未來照亮。",w:"台灣人很熟悉的旋律，日本總排行第 4 名，常用在二進或切蛋糕。",yt:"EAgACSowE5k"},
 {t:"恋",kk:"GkrbZ94unSw3Sxjjdx",z:"戀",a:"星野源",y:2016,l:"日語",s:["06","10","11","C"],p:"快",st:"經典",m:"日劇《月薪嬌妻》的主題曲，講夫妻兩人不管是什麼形式，都想一起過日子，唱出新世代的婚姻觀。",w:"有「戀舞」的話題性，台灣也有很多人知道，氣氛歡樂。",yt:"OSeStDEAZJQ"},
 {t:"115万キロのフィルム",z:"115 萬公里的底片",a:"Official髭男dism",y:2018,l:"日語",s:["00"],p:"中",st:"近年流行",m:"把和戀人的人生比作一部電影，說要一直拍到底片長達 115 萬公里，也就是相伴到人生的盡頭，主角永遠是你。",w:"2026 年日本成長影片排行第 1 名，台灣 Dcard 也很常推。",yt:"ReCnlwVZj1M"},
 {t:"虹",kk:"4pPGrKKhiO7N5qmSx8",z:"彩虹",a:"菅田将暉",y:2020,l:"日語",s:["00","04"],p:"中",st:"近年流行",m:"電影《STAND BY ME 哆啦A夢 2》的主題曲，描寫要和對方一起分擔哭和笑，說要一直守護對方，副歌唱出共度一生的承諾。",w:"電影正是在講大雄的婚禮，台灣婚禮歌單也常出現。",yt:"hkBbUf4oGfA"},
 {t:"恋人じゃなくなった日",kk:"4rw-M4vwSSJLp5YluN",z:"不再是戀人的那天",a:"優里",y:2023,l:"日語",s:["00"],p:"慢",st:"近年流行",m:"歌詞裡有兩個「不再是戀人的那天」：一個是曾經分手的那天，另一個是復合後求婚、成為家人的那天，描寫從戀人變成家人的過程。",w:"台灣 Dcard 婚禮歌單有人推，結局是求婚。",c:"前半段有分手的情節，如果在意，建議剪輯只用後半段。",yt:"ysqGvafOcaQ"},
-{t:"Story",kk:"4ogrBkq6tWt5lyJ8jZ",a:"AI",y:2005,l:"日語",s:["00","01"],p:"慢",st:"經典",m:"歌詞說「一個人做不到的事，兩個人一起就能克服」，在難過的時候我會陪在你身邊，是一首講支持與陪伴的歌。",w:"日本成長影片排行的常客（2026 年第 4 名）。",yt:"B2fPYlGKdXM"},
+{t:"Story",kk:"4ogrBkq6tWt5lyJ8jZ",a:"AI",y:2005,l:"日語",s:["00","F","01"],p:"慢",st:"經典",m:"歌詞說「一個人做不到的事，兩個人一起就能克服」，在難過的時候我會陪在你身邊，是一首講支持與陪伴的歌。",w:"日本成長影片排行的常客（2026 年第 4 名）。",yt:"B2fPYlGKdXM"},
 {t:"未来へ",kk:"9_8GjTpuL75jLXLSxB",z:"向未來",a:"Kiroro",y:1998,l:"日語",s:["00","03"],p:"慢",st:"經典",m:"歌詞回想母親一直在背後守護自己的話語，帶著這份愛往未來走下去，是一首感謝母親的歌。",w:"日本總排行第 2 名，讀感謝信、獻花給父母時的超級經典。",yt:"OZ3UuZdUHZc"},
 {t:"愛をこめて花束を",kk:"HXSiFqboaXJ8Y_SCNM",z:"獻上滿懷愛意的花束",a:"Superfly",y:2008,l:"日語",s:["03","C"],p:"中",st:"經典",m:"歌詞說想把說不出口的感謝和愛化成一束花送給你，表達會一直陪著對方、愛著對方。",w:"2026 年日本讀信段落排行第 1 名、總排行第 5 名。",yt:"gU5oN0KVofU"},
-{t:"家族になろうよ",kk:"OqO-097PMMmVcs4SaL",z:"成為一家人吧",a:"福山雅治",y:2011,l:"日語",s:["01","05","C"],p:"中",st:"經典",m:"像求婚一樣邀對方「一起成為家人吧」，想像兩人慢慢變成像各自父母那樣的老夫妻，並說出對雙方父母的尊敬。",w:"日本最具代表性的婚禮歌之一，在感謝父母和新人的段落都適用。",yt:"vrkbf9CVkn4"},
-{t:"ありがとう",kk:"Hag37nFVE8K3YYUJBg",z:"謝謝",a:"いきものがかり",y:2010,l:"日語",s:["01","C"],p:"中",st:"經典",m:"歌詞說想把「謝謝」這句話傳達給一路陪伴自己、和自己一起走下去的你，感謝相遇，也承諾往後相伴。",w:"NHK 晨間劇的主題曲，日本婚禮讀信段落排行的常客。",yt:"VZBU8LvZ91Q"},
+{t:"家族になろうよ",kk:"OqO-097PMMmVcs4SaL",z:"成為一家人吧",a:"福山雅治",y:2011,l:"日語",s:["F","01","05","C"],p:"中",st:"經典",m:"像求婚一樣邀對方「一起成為家人吧」，想像兩人慢慢變成像各自父母那樣的老夫妻，並說出對雙方父母的尊敬。",w:"日本最具代表性的婚禮歌之一，在感謝父母和新人的段落都適用。",yt:"vrkbf9CVkn4"},
+{t:"ありがとう",kk:"Hag37nFVE8K3YYUJBg",z:"謝謝",a:"いきものがかり",y:2010,l:"日語",s:["F","01","C"],p:"中",st:"經典",m:"歌詞說想把「謝謝」這句話傳達給一路陪伴自己、和自己一起走下去的你，感謝相遇，也承諾往後相伴。",w:"NHK 晨間劇的主題曲，日本婚禮讀信段落排行的常客。",yt:"VZBU8LvZ91Q"},
 {t:"にじいろ",z:"彩虹色",a:"絢香",y:2014,l:"日語",s:["08","B","C"],p:"中",st:"經典",m:"NHK 晨間劇《花子與安妮》的主題曲，講就算遇到雨天，也能和重要的人一起等到彩虹，牽著手笑著往前走。",w:"2026 年日本用餐段落排行第 1 名、退場排行第 2 名，旋律明亮溫暖。",yt:"LStkPRnnf8Q"},
 {t:"バンザイ～好きでよかった～",z:"萬歲～喜歡你真好～",a:"ウルフルズ",y:1996,l:"日語",s:["08","B"],p:"中",st:"經典",m:"直白地唱出「能喜歡上你真是太好了，萬歲」，說往後不管好事壞事都想和你一起笑著度過。",w:"2026 年日本婚禮乾杯排行第 1 名，很適合敬酒時的熱鬧氣氛。",yt:"GdSg_NdtGbc"},
-{t:"Family Song",kk:"OrF9JxTVf78HVSEfdO",a:"星野源",y:2017,l:"日語",s:["01","C"],p:"中",st:"經典",m:"祝願重要的人能夠幸福，歌詞說家人不一定只靠血緣，願你的日子平穩、天天有笑容。",w:"2026 年日本婚禮退場排行第 1 名。",yt:"Ucbp-Ej5RpI"},
+{t:"Family Song",kk:"OrF9JxTVf78HVSEfdO",a:"星野源",y:2017,l:"日語",s:["F","01","C"],p:"中",st:"經典",m:"祝願重要的人能夠幸福，歌詞說家人不一定只靠血緣，願你的日子平穩、天天有笑容。",w:"2026 年日本婚禮退場排行第 1 名。",yt:"Ucbp-Ej5RpI"},
 {t:"糸",kk:"4lQbjjnq9Z5EZQeZx6",z:"線",a:"中島みゆき",y:1992,l:"日語",s:["00","05","07","B"],p:"慢",st:"經典",m:"把兩人比作直線和橫線，說兩條線交織在一起就能成為一塊布，溫暖某個人，也可能保護某個人的傷口；講的是命中注定的相遇。",w:"日本最經典的婚禮歌之一，菅田將暉等人翻唱的版本也很受歡迎。",yt:"VI8zQG-yMMI"},
 {t:"カタオモイ",kk:"4sX-eFuTOGRFgLwORP",z:"單相思",a:"Aimer",y:2016,l:"日語",s:["05","B"],p:"慢",st:"近年流行",m:"雖然歌名是「單相思」，其實寫的是兩人已經在一起之後，愛意卻越來越深、像永遠在單戀對方一樣，就算老了、臉上長出皺紋也想一直在一起。",w:"台灣 Dcard 婚禮日文歌單有人推，日本也常被當作求婚歌。",c:"歌名是「單相思」，賓客看到歌名可能會誤會，建議在主持詞或字幕中說明歌詞的意思。",yt:"kxs9Su_mbpU"},
 {t:"てんとう虫のサンバ",z:"瓢蟲森巴",a:"チェリッシュ",y:1973,l:"日語",s:["09","10","A"],p:"中",st:"經典",m:"以森林裡的小動物與瓢蟲為新人舉辦婚禮的童話場景，描寫大家圍繞著新郎新婦跳舞祝福。整首歌充滿天真歡樂的祝賀氣氛。",w:"日本昭和時代最具代表性的婚禮祝賀歌，常年列入結婚式定番曲。",src:"https://www.ragnet.co.jp/fifties-wedding-songs/2",yt:"xNvTmNMlVjA"},
@@ -651,18 +677,18 @@ const SONGS=[
 {t:"Welcome to the Show",kk:"TYq_rX8lGziN5NxUxh",a:"DAY6",y:2024,l:"韓語",s:["10","12","C"],p:"快",st:"近年流行",m:"感謝一路牽著手同行的人，承諾會一直盡全力陪著對方，走到最後回頭看時能說「因為是你所以很幸福」。",w:"2024–2025 的大熱歌，歌詞有感謝和承諾的感覺，很適合當最後的送客曲。",c:"原本是寫給粉絲的感謝歌，不過歌詞也能當成兩人的誓言。",yt:"RowlrvmyFEk"},
 {t:"아주 NICE",z:"非常 NICE",a:"세븐틴（SEVENTEEN）",y:2016,l:"韓語",s:["06","08","10","11","C"],p:"快",st:"近年流行",m:"歌詞充滿興奮的心情，說和你在一起的今天一切都非常好、非常 NICE。",w:"韓國派對和婚禮的帶動氣氛神曲，副歌簡單，大家都能跟著喊。",yt:"J-wFp43XOrA"},
 {t:"우주를 줄게",z:"給你宇宙",a:"볼빨간사춘기（臉紅的思春期）",y:2016,l:"韓語",s:["09","10"],p:"中",st:"經典",m:"女孩每晚想著喜歡的人，用「把整個宇宙送給你」來表達滿滿的愛意。",w:"逆襲爆紅的國民甜歌，曲風可愛，適合換裝後的二進。",c:"歌詞比較像熱戀中的心動，不是在講婚姻承諾，當輕鬆的背景曲最合適。",yt:"9U8uA702xrE"},
-{t:"감사",z:"感謝",a:"김동률（金東律）",y:2008,l:"韓語",s:["01","02","05"],p:"慢",st:"經典",m:"感謝上天讓自己遇見所愛的人，承諾會用一輩子回報這份愛與幸福。",w:"韓國男歌手最常唱的經典祝歌之一，莊重又真摯。",yt:"WvJb1PtpHB4"},
+{t:"감사",z:"感謝",a:"김동률（金東律）",y:2008,l:"韓語",s:["F","01","02","05"],p:"慢",st:"經典",m:"感謝上天讓自己遇見所愛的人，承諾會用一輩子回報這份愛與幸福。",w:"韓國男歌手最常唱的經典祝歌之一，莊重又真摯。",yt:"WvJb1PtpHB4"},
 {t:"오르막길",z:"上坡路",a:"정인（Jung In）& 윤종신（尹鍾信）",y:2012,l:"韓語",s:["00","05"],p:"慢",st:"經典",m:"把結婚後的人生比喻成一條上坡路，說路會很辛苦，但只要牽緊彼此的手就能一起走上去。",w:"韓國非常常見的女聲祝歌，歌詞成熟、有誓言的分量。",yt:"HwC3KGJKZIg"},
-{t:"10월의 어느 멋진 날에",kk:"5X7PBnLvELRudwHxqD",z:"在十月某個美好的日子",a:"김동규（金東圭）",y:2000,l:"韓語",s:["01","04","A"],p:"慢",st:"經典",m:"在美好的十月天裡，感謝能和所愛的人在一起，對方就是自己生命中最美的風景。",w:"聲樂風格的國民秋季婚禮名曲，秋天的婚禮特別應景。",yt:"w4XQji28p6M"},
+{t:"10월의 어느 멋진 날에",kk:"5X7PBnLvELRudwHxqD",z:"在十月某個美好的日子",a:"김동규（金東圭）",y:2000,l:"韓語",s:["F","01","04","A"],p:"慢",st:"經典",m:"在美好的十月天裡，感謝能和所愛的人在一起，對方就是自己生命中最美的風景。",w:"聲樂風格的國民秋季婚禮名曲，秋天的婚禮特別應景。",yt:"w4XQji28p6M"},
 {t:"그중에 그대를 만나",z:"在那之中遇見了你",a:"이선희（李仙姬）",y:2014,l:"韓語",s:["00","04"],p:"慢",st:"經典",m:"在無數的人與星星之中偏偏遇見了你，這份奇蹟般的緣分讓人生變得美好。",w:"韓國婚禮常見的女聲祝歌，很適合愛情故事影片。",yt:"IAyMtl9FRHI"},
 {t:"가족사진",z:"全家福",a:"김진호（金振浩）",y:2013,l:"韓語",s:["00"],p:"慢",st:"經典",m:"看著全家福照片，想起父母為了讓自己「開花」，甘願把青春化成養分，現在想好好報答他們。",w:"韓國感謝父母影片的首選歌，常常讓全場落淚。",c:"情緒很重，搭配歡樂畫面時要注意氣氛銜接。",yt:"1Rce7tw5L90"},
-{t:"아버지",z:"父親",a:"인순이（印順伊）",y:2009,l:"韓語",s:["00","01"],p:"慢",st:"經典",m:"從前不懂父親沉默的愛，也一直沒有走近他，現在希望趁還來得及，對日漸老去的父親說出「我愛你」。",w:"韓國感謝父母環節的經典曲，特別適合新娘獻給爸爸。",yt:"80y5qNDRJvw"},
+{t:"아버지",z:"父親",a:"인순이（印順伊）",y:2009,l:"韓語",s:["00","F","01"],p:"慢",st:"經典",m:"從前不懂父親沉默的愛，也一直沒有走近他，現在希望趁還來得及，對日漸老去的父親說出「我愛你」。",w:"韓國感謝父母環節的經典曲，特別適合新娘獻給爸爸。",yt:"80y5qNDRJvw"},
 {t:"엄마가 딸에게",z:"媽媽給女兒",a:"양희은（楊姬銀）",y:2015,l:"韓語",s:["00","03"],p:"慢",st:"經典",m:"用媽媽的口吻對女兒說話，說自己也是第一次當媽媽、做得不夠好，只希望女兒成為真正的自己、過得幸福。",w:"很適合新娘成長影片或母女橋段，歌詞很溫柔。",yt:"8rWuQI9ljsY"},
 {t:"걱정말아요 그대",z:"別擔心，親愛的",a:"이적（李笛）／原唱 전인권",y:2015,l:"韓語",s:["00","C"],p:"中",st:"經典",m:"告訴對方不用再為過去的事後悔，一起唱歌、懷著新夢想往前走。",w:"《請回答1988》的主題曲，懷舊溫暖，很適合配童年照片。",yt:"Dic27EnDDls"},
-{t:"사랑으로",z:"以愛",a:"해바라기（向日葵樂團）",y:1989,l:"韓語",s:["01","07","C"],p:"慢",st:"經典",m:"歌者期許自己用一生的愛去照亮身邊的人，願意為他人奉獻、成為溫暖的力量。曲風莊重溫厚，充滿對未來的祝福。",w:"韓國媒體列為婚禮上最常被演唱的經典祝歌之一。",src:"https://weekly.khan.co.kr/article/6405",yt:"qBEoECu52jI"},
+{t:"사랑으로",z:"以愛",a:"해바라기（向日葵樂團）",y:1989,l:"韓語",s:["F","01","07","C"],p:"慢",st:"經典",m:"歌者期許自己用一生的愛去照亮身邊的人，願意為他人奉獻、成為溫暖的力量。曲風莊重溫厚，充滿對未來的祝福。",w:"韓國媒體列為婚禮上最常被演唱的經典祝歌之一。",src:"https://weekly.khan.co.kr/article/6405",yt:"qBEoECu52jI"},
 {t:"너를 사랑해",kk:"WqCaaw_aTPWt7lAn1b",z:"我愛你",a:"한동준（韓東俊）",y:1991,l:"韓語",s:["05","B"],p:"慢",st:"經典",m:"歌者向對方真誠表白，說明對方在自己心中無可取代的分量，承諾會一直珍惜這份感情。",w:"韓國媒體將它與〈사랑의 서약〉並列為婚禮常唱的男聲祝歌。",src:"https://weekly.khan.co.kr/article/6405",yt:"ks1foXRwlTg"},
 {t:"사랑의 서약",z:"愛的誓約",a:"한동준（韓東俊）",y:1995,l:"韓語",s:["04","05"],p:"慢",st:"經典",m:"以誓詞般的口吻許下承諾：無論未來順遂或艱難都會相守，一起走完人生。",w:"韓國與台灣的韓文婚禮歌單都列為祝歌必備曲，歌詞主題就是婚約誓言。",src:"https://weekly.khan.co.kr/article/6405",yt:"DITy64BkgtY"},
-{t:"사랑을 위하여",kk:"OrYwqqAVf78HXpllEZ",z:"為了愛",a:"김종환（金鐘煥）",y:1997,l:"韓語",s:["01","07"],p:"慢",st:"經典",m:"歌者想成為能讓對方安心依靠的人，願意付出一切，與對方相伴到老。",w:"韓國媒體將它列為婚禮場合常見的代表性祝歌。",src:"https://weekly.khan.co.kr/article/6405",yt:"NL-6Grjs6U4"},
+{t:"사랑을 위하여",kk:"OrYwqqAVf78HXpllEZ",z:"為了愛",a:"김종환（金鐘煥）",y:1997,l:"韓語",s:["F","01","07"],p:"慢",st:"經典",m:"歌者想成為能讓對方安心依靠的人，願意付出一切，與對方相伴到老。",w:"韓國媒體將它列為婚禮場合常見的代表性祝歌。",src:"https://weekly.khan.co.kr/article/6405",yt:"NL-6Grjs6U4"},
 {t:"내가 만일",z:"如果我是",a:"안치환（安致煥）",y:1997,l:"韓語",s:["05","07"],p:"慢",st:"經典",m:"歌者用一連串「假如我是天空、是風」的比喻，說自己願意化作各種形態守護、照亮對方。",w:"韓國媒體將它列為婚禮上常被演唱的祝歌。",src:"https://weekly.khan.co.kr/article/6405",yt:"-zfpzH-74K0"},
 {t:"신부에게",kk:"SmJZPPM52bwp7r8eq0",z:"致新娘",a:"유리상자（玻璃箱子）",y:1999,l:"韓語",s:["03","05"],p:"慢",st:"經典",m:"新郎對即將成為妻子的人深情告白，感謝她願意託付一生，並承諾會讓她幸福。",w:"韓國媒體稱它是婚禮上最常演唱的祝歌之一，台灣 PTT 的歌單也有收錄。",src:"https://weekly.khan.co.kr/article/6405",yt:"KtgEPFh5BXA"},
 {t:"Marry U",kk:"OndNgg07o9axNIMt2E",a:"슈퍼주니어（Super Junior）",y:2007,l:"韓語",s:["04","06"],p:"中",st:"經典",m:"以求婚為主題，男生承諾會一輩子愛護對方，邀請她與自己共度餘生。",w:"PTT KoreanPop 板的婚禮歌單討論中被推薦，也是知名的求婚歌。",src:"https://www.ptt.cc/bbs/KoreanPop/M.1560867484.A.B56.html",yt:"ir-tZS3TaxM"},
@@ -764,17 +790,16 @@ const LC=Object.fromEntries(LANGS.map(x=>[x.k,x.c]));
 const COLS=[
  {k:"候選",n:"候選",d:"喜歡但還沒決定"},
  {k:"00",n:"開場（小編）"},
- {k:"01",n:"男方"},
+ {k:"F",n:"女方主婚人"},
+ {k:"01",n:"男方主婚人"},
  {k:"02",n:"新郎"},
  {k:"03",n:"新娘"},
  {k:"04",n:"新人"},
- {k:"05",n:"儀式"},
  {k:"06",n:"香檳"},
  {k:"07",n:"致詞"},
  {k:"08",n:"舉杯"},
- {k:"09",n:"捧花"},
  {k:"10",n:"二進"},
- {k:"11",n:"抽獎"},
+ {k:"09",n:"捧花"},
  {k:"12",n:"頒獎"},
  {k:"A",n:"迎賓音樂",min:10,max:15},
  {k:"B",n:"用餐音樂",min:10,max:15},
@@ -782,11 +807,17 @@ const COLS=[
  {k:"X",n:"已排除",d:"查過但不打算用的歌，不算進歌單"}
 ];
 const STAGES=COLS.filter(c=>c.k!=="候選"&&c.k!=="X");
-const stageName=k=>k+" "+COLBY[k].n.replace(/（[^）]*）/g,"");
-const colLabel=c=>c.k==="候選"||c.k==="X"?c.n:c.k+" "+c.n;
+const stageName=k=>COLBY[k].n.replace(/（[^）]*）/g,"");  // filters and tags go by name; the numbers stay on the board
+/* k is the stage's stored key (boards, song tags and AI results use it) and never changes; the number shown is just
+   the stage's place in the wedding order, 00 開場 onwards, so stages can be added or reordered without renumbering data.
+   The background-music lists keep their letters. */
+const isMusic=k=>/^[A-C]$/.test(k);
+const codeOf=c=>isMusic(c.k)?c.k:String(COLS.filter(x=>x.k!=="候選"&&x.k!=="X"&&!isMusic(x.k)).indexOf(c)).padStart(2,"0");
+const colLabel=c=>c.k==="候選"||c.k==="X"?c.n:codeOf(c)+" "+c.n;
 const COLBY=Object.fromEntries(COLS.map(c=>[c.k,c]));
 /* placements saved under the earlier scene names */
-const OLDCOL={"迎賓":"A","用餐敬酒":"B","送客":"C","二進":"10","成長影片":"00","一進":"候選","感謝父母":"候選"};
+/* stages a board may still hold from before: 儀式 (05) and 抽獎 (11) were dropped, their songs wait in 候選 */
+const OLDCOL={"迎賓":"A","用餐敬酒":"B","送客":"C","二進":"10","成長影片":"00","一進":"候選","感謝父母":"候選","05":"候選","11":"候選"};
 const key=s=>s.t+"|"+s.a;
 const BYKEY=Object.fromEntries(SONGS.map(s=>[key(s),s]).concat(TRAPS.map(t=>[key(t),Object.assign({trap:true},t)])));
 /* songs typed into the custom card carry their own title/artist in the key */
@@ -840,7 +871,7 @@ function kkLink(t,a,id){const x=el("a","yt kk");x.href=id?"https://www.kkbox.com
   x.setAttribute("aria-label",how+" "+t);x.title=how;return x}
 
 /* ---------- board state: shared db when available, this browser otherwise ---------- */
-const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{},_ai:{},_color:{},_yt:{}});
+const emptyBoard=()=>Object.assign(Object.fromEntries(COLS.map(c=>[c.k,[]])),{_by:{},_like:{},_ai:{},_color:{},_yt:{},_hide:{}});
 function clean(b){const out=emptyBoard(),seen=new Set();
   if(b&&typeof b==="object")Object.keys(b).forEach(ck=>{const to=COLBY[ck]?ck:OLDCOL[ck];if(!to||!Array.isArray(b[ck]))return;
     b[ck].forEach(k=>{if(songOf(k)&&!seen.has(k)){seen.add(k);out[to].push(k)}})});
@@ -862,6 +893,12 @@ function clean(b){const out=emptyBoard(),seen=new Set();
   if(yt&&typeof yt==="object")Object.keys(yt).forEach(k=>{const v=yt[k];if(!seen.has(k)||!v)return;
     if(typeof v.v==="string"&&/^[\w-]{11}$/.test(v.v))out._yt[k]=Object.assign({v:v.v},v.s>0?{s:Math.floor(v.s)}:{},v.t>0?{t:+v.t}:{});
     else if(+v.x>0)out._yt[k]={x:+v.x}});
+  /* _hide: stage → when it was hidden (or shown again, as a negative time) for this board; hidden stages are left off the board and the menus */
+  const hd=b&&b._hide;
+  if(hd&&typeof hd==="object")Object.keys(hd).forEach(k=>{const t=+hd[k];if(t&&STAGES.some(c=>c.k===k))out._hide[k]=t});
+  /* _name: {v: the board's name (empty once cleared), t: when set} */
+  const nm=b&&b._name;
+  if(nm&&typeof nm.v==="string")out._name={v:nm.v.trim().slice(0,30),t:+nm.t||0};
   return out}
 let nickname="";try{nickname=localStorage.getItem("wedding-nickname")||""}catch(e){}
 const pickerOf=k=>board._by&&board._by[k]?board._by[k].n:"";
@@ -877,6 +914,14 @@ function mergeYt(b,remote){const r=remote&&remote._yt;if(!r||typeof r!=="object"
   Object.keys(r).forEach(k=>{const v=r[k];if(!v||!COLS.some(c=>b[c.k].includes(k)))return;
     const ok=typeof v.v==="string"&&/^[\w-]{11}$/.test(v.v);if(!ok&&!(+v.x>0))return;
     if(ytTime(v)>ytTime(b._yt[k]))b._yt[k]=ok?Object.assign({v:v.v},v.s>0?{s:Math.floor(v.s)}:{},v.t>0?{t:+v.t}:{}):{x:+v.x}})}
+function mergeName(b,remote){const r=remote&&remote._name;
+  if(r&&typeof r.v==="string"&&(+r.t||0)>(b._name?.t||0))b._name={v:r.v.trim().slice(0,30),t:+r.t||0}}
+function mergeHide(b,remote){const r=remote&&remote._hide;if(!r||typeof r!=="object")return;
+  Object.keys(r).forEach(k=>{const t=+r[k];if(t&&STAGES.some(c=>c.k===k)&&Math.abs(t)>Math.abs(b._hide[k]||0))b._hide[k]=t})}
+/* a hidden stage still shows while songs are in it, so nothing on the board ever disappears */
+const isHidden=k=>board._hide[k]>0&&!board[k].length;
+const shownCols=()=>COLS.filter(c=>!isHidden(c.k));
+function setHidden(k,on){board._hide[k]=on?Date.now():-Date.now();if(!on&&state.scene===k)state.scene=null;if(on&&state.scene===k)state.scene=null;persist();render()}
 function mergeLikes(b,remote){const r=remote&&remote._like;if(!r||typeof r!=="object")return;
   Object.keys(r).forEach(k=>{if(!COLS.some(c=>b[c.k].includes(k))||!r[k]||typeof r[k]!=="object")return;
     const m=b._like[k]||{};Object.keys(r[k]).forEach(n=>{const t=+r[k][n];if(t&&Math.abs(t)>Math.abs(m[n]||0))m[n]=t});
@@ -1046,9 +1091,52 @@ function setupShare(){
   const dlg=document.getElementById("shareDlg"),inp=document.getElementById("shareUrl"),copy=document.getElementById("copyUrl"),native=document.getElementById("nativeShare");
   document.getElementById("shareId").textContent=boardId;
   native.hidden=!navigator.share;
-  document.getElementById("shareBtn").onclick=()=>{inp.value=location.href;copy.textContent="複製";openDialog(dlg);inp.scrollLeft=0};
+  const name=document.getElementById("shareName");name.oninput=()=>setName(name.value);
+  document.getElementById("shareBtn").onclick=()=>{name.value=boardName();inp.value=location.href;copy.textContent="複製";openDialog(dlg);inp.scrollLeft=0};
   copy.onclick=async()=>{try{await navigator.clipboard.writeText(inp.value);copy.textContent="已複製"}catch(_){inp.focus();inp.select();copy.textContent="請按 ⌘C 複製"}};
-  native.onclick=async()=>{try{await navigator.share({title:"婚禮選歌板",text:"一起來排婚禮歌單",url:inp.value})}catch(_){}};
+  native.onclick=async()=>{try{await navigator.share({title:boardName()||"婚禮選歌板",text:"一起來排婚禮歌單",url:inp.value})}catch(_){}};
+}
+/* the board's name: on its heading, the tab title and in 我的歌單 */
+const boardName=()=>board._name?.v||"";
+function setName(v){board._name={v:v.trim().slice(0,30),t:Date.now()};persist();renderName()}
+/* boards opened on this device, for 我的歌單: id → {n: last known name, t: when last opened} */
+function knownBoards(){try{const m=JSON.parse(localStorage.getItem("wedding-boards")||"{}");return m&&typeof m==="object"?m:{}}catch(e){return{}}}
+function rememberBoard(id,n,opened){const m=knownBoards(),v=m[id]||{};v.n=n;if(opened)v.t=Date.now();m[id]=v;
+  try{localStorage.setItem("wedding-boards",JSON.stringify(m))}catch(e){}}
+function renderName(){const n=boardName();
+  document.getElementById("boardName").textContent=n||"我的婚禮歌單";document.title=n?n+"・婚禮選歌板":"婚禮選歌板";
+  if(boardId&&n!==(knownBoards()[boardId]||{}).n)rememberBoard(boardId,n);
+  renderBoards()}
+/* header dropdown: this device's boards (current first, then most recently opened) and 新增歌單 last */
+let boardsSig="";
+function renderBoards(){const sel=document.getElementById("boardsSel");if(!boardId||!sel)return;
+  const m=knownBoards(),saved=id=>{try{return COLS.some(c=>(JSON.parse(localStorage.getItem("wedding-board:"+id))||{})[c.k]?.length)}catch(e){return false}};
+  /* an unnamed, empty board elsewhere is just a page that was opened once; leave it out */
+  const ids=Object.keys(m).filter(id=>id===boardId||m[id].n||saved(id)).sort((a,b)=>a===boardId?-1:b===boardId?1:(m[b].t||0)-(m[a].t||0));
+  const opts=ids.map(id=>[id,(id===boardId?boardName():m[id].n)||"未命名歌單"]).concat([["+new","＋ 新增歌單"]]),sig=JSON.stringify(opts);
+  if(sig!==boardsSig){boardsSig=sig;sel.replaceChildren(...opts.map(([v,t])=>{const o=el("option",null,t);o.value=v;return o}))}
+  sel.value=boardId}
+function setupBoards(){
+  if(!boardId)return;
+  const sel=document.getElementById("boardsSel"),dlg=document.getElementById("boardsDlg"),form=document.getElementById("boardsForm"),inp=document.getElementById("newBoardName");
+  /* boards opened before the dropdown existed are still saved in this browser */
+  try{const m=knownBoards();let found=false;
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i)||"",id=k.startsWith("wedding-board:")?k.slice(14):"";
+      if(!ID_RE.test(id)||m[id])continue;
+      let n="";try{n=JSON.parse(localStorage.getItem(k))?._name?.v||""}catch(_){}
+      m[id]={n,t:0};found=true}
+    if(found)localStorage.setItem("wedding-boards",JSON.stringify(m))}catch(e){}
+  rememberBoard(boardId,boardName(),true);
+  const go=id=>{const u=new URL(location.href);u.searchParams.set("board",id);location.href=u.toString()};
+  sel.onchange=()=>{const v=sel.value;sel.value=boardId;
+    if(v==="+new"){inp.value="";openDialog(dlg);focusField(inp)}else if(v!==boardId)go(v)};
+  /* a new board starts empty under its name; its first save creates the shared row */
+  form.addEventListener("submit",e=>{e.preventDefault();const n=inp.value.trim().slice(0,30);if(!n)return;
+    const id=newBoardId(),b=emptyBoard();b._name={v:n,t:Date.now()};
+    try{localStorage.setItem("wedding-board:"+id,JSON.stringify(b))}catch(_){}
+    rememberBoard(id,n,true);go(id)});
+  document.getElementById("boardsClose").onclick=()=>dlg.close();
+  renderBoards();
 }
 function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
 (async()=>{
@@ -1074,8 +1162,8 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
   remoteSave=async b=>{
     /* the whole board is overwritten, so first fold in likes saved by others meanwhile */
     const cur=await sb.from("boards").select("cols").eq("id",boardId).maybeSingle();
-    if(cur.data){const before=JSON.stringify([b._like,b._color,b._yt]);mergeLikes(b,cur.data.cols);mergeColors(b,cur.data.cols);mergeYt(b,cur.data.cols);
-      if(JSON.stringify([b._like,b._color,b._yt])!==before){saveLocal();render()}}
+    if(cur.data){const before=JSON.stringify([b._like,b._color,b._yt,b._hide,b._name]);mergeLikes(b,cur.data.cols);mergeColors(b,cur.data.cols);mergeYt(b,cur.data.cols);mergeHide(b,cur.data.cols);mergeName(b,cur.data.cols);
+      if(JSON.stringify([b._like,b._color,b._yt,b._hide,b._name])!==before){saveLocal();render()}}
     const {error}=await sb.from("boards").upsert({id:boardId,cols:b,updated_at:new Date().toISOString()});
     if(error)throw error;
     chan.send({type:"broadcast",event:"updated",payload:{}}).catch(()=>{});
@@ -1084,7 +1172,7 @@ function newBoardId(){const b=new Uint8Array(16);crypto.getRandomValues(b);retur
     const {data,error}=await sb.from("boards").select("cols").eq("id",boardId).maybeSingle();
     if(error){setSync("error");return}
     if(data)applyRemote(data.cols);
-    else if(initial&&COLS.some(c=>board[c.k].length)){dirty=true;flush();return}
+    else if(initial&&(COLS.some(c=>board[c.k].length)||board._name?.v)){dirty=true;flush();return}
     if(!dirty&&!writing)setSync("link");
   }
   presenceChan=chan;
@@ -1112,6 +1200,8 @@ const REASON={sexual_innuendo:"性暗示",unrequited_love:"單戀",breakup:"分�
 const TEMPO={fast:"快",medium:"中",slow:"慢"};
 const lowConf=x=>x.confidence==="low"||x.lyrics_source_index===0;
 function aiScenes(x){if(x.is_landmine)return[];let sc=(x.suggested_scenes||[]).filter(k=>COLBY[k]&&k!=="候選");
+  /* the lookup suggests 01 for the parents; 女方主婚人 (F) came later and suits the same songs */
+  if(sc.includes("01")&&!sc.includes("F"))sc.unshift("F");
   if(x.wedding_verdict==="caution")sc=sc.filter(k=>!["03","04","05"].includes(k));return sc}
 let lookTimer=null,lookBusy=false;
 const aiOnFor=(k,s)=>!!(boardId&&window.supabase&&(s.custom||board._ai[k]));
@@ -1233,7 +1323,7 @@ let openCustom=()=>{};
 function setupCustomDialog(){
   const dlg=document.getElementById("customDlg"),form=document.getElementById("customForm"),ti=document.getElementById("customTitle"),ai=document.getElementById("customArtist"),
     sel=document.getElementById("customStage"),add=document.getElementById("customAdd"),links=document.getElementById("customLinks");
-  COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選":colLabel(c),c.k)));
+  const fillStages=()=>{sel.replaceChildren();shownCols().forEach(c=>sel.append(new Option(c.k==="候選"?"候選":colLabel(c),c.k)))};
   const kk=kkLink("",""),yt=ytLink("","");links.append(kk,yt);
   const yi=document.getElementById("customYt"),hint=document.getElementById("customYtHint");
   const val=()=>({t:ti.value.trim(),a:ai.value.trim()});
@@ -1258,7 +1348,7 @@ function setupCustomDialog(){
     [kk,yt].forEach(x=>{x.classList.toggle("off",!ok);x.setAttribute("aria-disabled",String(!ok))});add.disabled=!ok};
   [kk,yt].forEach(x=>x.addEventListener("click",e=>{if(!val().t)e.preventDefault()}));
   [ti,ai].forEach(i=>i.addEventListener("input",sync));
-  openCustom=(title)=>{ti.value=title||"";ai.value="";yi.value="";vid=null;auto={t:"",a:""};ytSeq++;setHint("");sel.value="候選";sync();openDialog(dlg);focusField(title?ai:yi)};
+  openCustom=(title)=>{ti.value=title||"";ai.value="";yi.value="";vid=null;auto={t:"",a:""};ytSeq++;setHint("");fillStages();sel.value="候選";sync();openDialog(dlg);focusField(title?ai:yi)};
   document.getElementById("customCancel").onclick=()=>dlg.close();
   form.addEventListener("submit",e=>{e.preventDefault();const v=val();if(!v.t)return;
     const k=customKey(v.t,v.a),to=sel.value||"候選",was=where(k),name=c=>colLabel(COLBY[c]).replace(/（[^）]*）/,"");
@@ -1318,7 +1408,7 @@ function placeSelect(k,label){
   const sel=el("select","place");sel.setAttribute("aria-label",label);
   const cur=where(k);
   sel.append(new Option(cur?"移出歌單":"＋ 加入歌單…",""));
-  COLS.forEach(c=>sel.append(new Option(c.k==="候選"?"候選":colLabel(c),c.k)));
+  shownCols().forEach(c=>sel.append(new Option(c.k==="候選"?"候選":colLabel(c),c.k)));
   sel.value=cur||"";if(!cur)sel.options[0].disabled=false;
   sel.onchange=()=>move(k,sel.value||null);
   return sel;
@@ -1338,7 +1428,7 @@ function card(s){
   const tp=el("span","tempo");tp.title="節奏："+s.p;const lv={"慢":1,"中":2,"快":3}[s.p];
   for(let i=1;i<=3;i++){const d=el("i",i<=lv?"on":"");d.style.height=(6+i*3)+"px";tp.append(d)}
   tp.append(" "+s.p);meta.append(tp);
-  const stages=el("div","meta stages");s.s.forEach(x=>stages.append(el("span","scene",stageName(x))));
+  const stages=el("div","meta stages");STAGES.filter(c=>s.s.includes(c.k)).forEach(c=>stages.append(el("span","scene",stageName(c.k))));
   c.append(meta,stages);
   const why=el("p","why",s.w);
   c.append(el("p","sum",s.m),why);
@@ -1439,18 +1529,19 @@ let xOpen=false;try{xOpen=!!localStorage.getItem("wedding-x-open")}catch(_){}
 function renderBoard(){
   const wrap=document.getElementById("cols");wrap.replaceChildren();
   let total=0;
-  COLS.forEach(c=>{
+  shownCols().forEach(c=>{
     const isX=c.k==="X";
     const z=el("div","col"+(c.k==="候選"?" maybe":"")+(isX?" excluded"+(xOpen?" open":""):"")+(board[c.k].length?"":" is-empty"));z.dataset.col=c.k;
     const hd=el("div","col-h");const n=board[c.k].length;
     const ct=el(isX?"button":"span","col-t");if(isX){ct.type="button";ct.setAttribute("aria-expanded",String(xOpen));
       ct.onclick=()=>{xOpen=!xOpen;try{localStorage.setItem("wedding-x-open",xOpen?"1":"")}catch(_){}renderBoard()};ct.append(el("span","x-caret",xOpen?"▾":"▸"))}
-    else if(c.k!=="候選")ct.append(el("span","col-code",c.k));
+    else if(c.k!=="候選")ct.append(el("span","col-code",codeOf(c)));
     ct.append(c.n);hd.append(ct);
     const cn=el("span","col-n",c.max?n+" / "+c.max+" 首":n+" 首");
     if(c.min)cn.dataset.ok=n<c.min?"low":n>c.max?"high":"ok";hd.append(cn);
     if(c.k!=="候選"&&!isX){const tb=el("button","col-tag","看推薦");tb.type="button";
-      tb.onclick=()=>{state.scene=c.k;setTab("pick");render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb)}
+      tb.onclick=()=>{state.scene=c.k;setTab("pick");render();document.getElementById("count").scrollIntoView({behavior:"smooth",block:"start"})};hd.append(tb);
+      if(!n&&c.k!=="X"){const hb=el("button","col-hide","隱藏");hb.type="button";hb.title="這場婚禮沒有這個階段";hb.setAttribute("aria-label","隱藏 "+colLabel(c));hb.onclick=()=>setHidden(c.k,true);hd.append(hb)}}
     if(c.d&&(!isX||xOpen))hd.append(el("span","col-d",c.d));z.append(hd);
     const ul=el("div","col-list");
     board[c.k].forEach(k=>{if(!isX)total++;const s0=songOf(k);
@@ -1473,13 +1564,18 @@ function renderBoard(){
       p.append(lg,tx,acts);ul.append(p)});
     z.append(ul);makeDrop(z,c.k);wrap.append(z);
   });
+  /* hidden stages, listed once just above 已排除 so they can be brought back */
+  const hid=STAGES.filter(c=>isHidden(c.k));
+  if(hid.length){const h=el("div","hidden-cols");h.append(el("span","hidden-l","已隱藏："));
+    hid.forEach(c=>{const b=el("button","chip",colLabel(c));b.type="button";b.title="顯示這個階段";b.setAttribute("aria-label","顯示 "+colLabel(c));b.onclick=()=>setHidden(c.k,false);h.append(b)});
+    wrap.insertBefore(h,wrap.querySelector('[data-col="X"]'))}
   document.getElementById("boardCount").textContent=total+" 首";
 }
 
 function render(){
-  colorMap=null;renderPeople();  // header avatars share the board's colour assignment
+  colorMap=null;renderPeople();renderName();  // header avatars share the board's colour assignment
   if(boardId&&!lookTimer&&!lookBusy)lookTimer=setTimeout(pollLookups,300);
-  document.querySelectorAll("#scenes .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.scene)));
+  document.querySelectorAll("#scenes .chip").forEach(c=>{c.setAttribute("aria-pressed",String(c.dataset.v===state.scene));c.hidden=isHidden(c.dataset.v)});
   document.querySelectorAll("#langs .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.lang)));
   document.querySelectorAll("#eras .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.v===state.era)));
   document.querySelectorAll("#viewSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===state.view)));
@@ -1525,6 +1621,7 @@ document.body.dataset.tab="pick";
 document.querySelectorAll("#tabbar button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 setupCustomDialog();
 setupShare();
+setupBoards();
 setupNickname();
 renderPeople();
 render();
